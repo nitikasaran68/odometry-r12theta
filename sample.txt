@@ -1,0 +1,8 @@
+/Users/nitikasaran/Desktop/movie4.m4v
+/Users/nitikasaran/Downloads/output/matchframes.txt
+/Users/nitikasaran/Downloads/output/matchframes_globalopt.txt
+/Users/nitikasaran/Downloads/output/Test_images/
+/Users/nitikasaran/Downloads/output/poses_orig.txt
+/Users/nitikasaran/Downloads/output/
+/Users/nitikasaran/Downloads/output/sim_avg.txt
+/Users/nitikasaran/Downloads/output/so3poses7.txt
