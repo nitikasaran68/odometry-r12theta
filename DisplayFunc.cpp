@@ -79,7 +79,7 @@ void DisplayIterationRes(frame* image_frame, Mat residual,String name, int frame
     string str = "final_res_";
     string type = ".jpg";
     
-    ss<<"/Users/himanshuaggarwal/Desktop/Test_images/"<<str<<(framenum-1)<<"_"<<int(homo)<<type;
+    ss<<"Test_images/"<<str<<(framenum-1)<<"_"<<int(homo)<<type;
     string filename = ss.str();
     ss.str("");
     
@@ -139,7 +139,7 @@ void DisplayInitialRes(frame* currentFrame,frame* prev_frame,String name, int fr
     string str = "initial_res_";
     string type = ".jpg";
     
-    ss<<"/Users/himanshuaggarwal/Desktop/Test_images/"<<str<<(framenum-1)<<"_"<<int(homo)<<type;
+    ss<<"Test_images/"<<str<<(framenum-1)<<"_"<<int(homo)<<type;
     string filename = ss.str();
     ss.str("");
     
@@ -191,7 +191,7 @@ void DisplayWarpedImg(Mat warpedimg,frame* prev_frame, String name, int framenum
     string str = "warped_img_";
     string type = ".jpg";
     
-    ss<<"/Users/himanshuaggarwal/Desktop/Test_images/"<<str<<(framenum-1)<<"_"<<int(homo)<<type;
+    ss<<"Test_images/"<<str<<(framenum-1)<<"_"<<int(homo)<<type;
     string filename = ss.str();
     ss.str("");
     
@@ -252,7 +252,7 @@ void DisplayOriginalImg(Mat origimg, frame* prev_frame, String name, int framenu
         string str = "orig_img_";
         string type = ".jpg";
         
-        ss<<"/Users/himanshuaggarwal/Desktop/Test_images/"<<str<<(framenum-1)<<type;
+        ss<<"Test_images/"<<str<<(framenum-1)<<type;
         string filename = ss.str();
         ss.str("");
         
@@ -306,7 +306,7 @@ void DisplayWeights(frame* image_frame, Mat weights,String name, int framenum,bo
     string str = "weights_";
     string type = ".jpg";
     
-    ss<<"/Users/himanshuaggarwal/Desktop/Test_images/"<<str<<(framenum-1)<<type;
+    ss<<"Test_images/"<<str<<(framenum-1)<<type;
     string filename = ss.str();
     ss.str("");
     
@@ -414,7 +414,7 @@ void DisplayWarpedImgPxelWise(Mat warpedimg,frame* prev_frame, String name, int 
     string str = "warped_img_";
     string type = ".jpg";
     
-    ss<<"/Users/himanshuaggarwal/Desktop/Test_images/"<<str<<(framenum-1)<<"_"<<int(homo)<<type;
+    ss<<"Test_images/"<<str<<(framenum-1)<<"_"<<int(homo)<<type;
     string filename = ss.str();
     ss.str("");
     
@@ -460,7 +460,7 @@ void DisplayInitialResPixelWise(Mat residualimg,frame* prev_frame, String name, 
     string str = "initial_res_";
     string type = ".jpg";
     
-    ss<<"/Users/himanshuaggarwal/Desktop/Test_images/"<<str<<(framenum-1)<<"_"<<int(homo)<<type;
+    ss<<"Test_images/"<<str<<(framenum-1)<<"_"<<int(homo)<<type;
     string filename = ss.str();
     ss.str("");
     
@@ -506,7 +506,7 @@ void DisplayIterationResPixelWise(Mat residualimg,frame* prev_frame, String name
     string str = "final_res_";
     string type = ".jpg";
     
-    ss<<"/Users/himanshuaggarwal/Desktop/Test_images/"<<str<<(framenum-1)<<"_"<<int(homo)<<type;
+    ss<<"Test_images/"<<str<<(framenum-1)<<"_"<<int(homo)<<type;
     string filename = ss.str();
     ss.str("");
     
@@ -555,7 +555,7 @@ void DisplayWeightsPixelWise(Mat weights,frame* prev_frame, String name, int fra
     string str = "weights_";
     string type = ".jpg";
     
-    ss<<"/Users/himanshuaggarwal/Desktop/Test_images/"<<str<<(framenum-1)<<"_"<<int(homo)<<type;
+    ss<<"Test_images/"<<str<<(framenum-1)<<"_"<<int(homo)<<type;
     string filename = ss.str();
     ss.str("");
     
@@ -609,7 +609,7 @@ void DisplayOriginalImgPixelWise(Mat origimg,frame* prev_frame, String name, int
     string str = "orig_img_";
     string type = ".jpg";
     
-    ss<<"/Users/himanshuaggarwal/Desktop/Test_images/"<<str<<(framenum-1)<<type;
+    ss<<"Test_images/"<<str<<(framenum-1)<<type;
     string filename = ss.str();
     ss.str("");
     
