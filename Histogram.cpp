@@ -12,10 +12,10 @@
 #include <unsupported/Eigen/MatrixFunctions>
 
 #include <cstdio>
-#include<ctime>
+#include <ctime>
 #include <cstdlib>
-#include"opencv2/opencv.hpp"
-#include<complex>
+#include "opencv2/opencv.hpp"
+#include <complex>
 #include <iostream>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>

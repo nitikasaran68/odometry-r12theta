@@ -1,7 +1,7 @@
 
 #include <cstdio>
 #include <cstdlib>
-#include"opencv2/opencv.hpp"
+#include "opencv2/opencv.hpp"
 #include <iostream>
 #include <opencv2/imgproc/imgproc.hpp>
 #include "ImageClass.h"
@@ -112,6 +112,7 @@ void ImageClass::ClonePyramid(ImageClass& img)
     
     img.image=this->image.clone();
     img.pyramid[0] = img.image.clone(); //Not cloning!, using referance to image
+
     img.pyramid[1] = this->pyramid[1].clone();
     img.pyramid[2] = this->pyramid[2].clone();
     img.pyramid[3] = this->pyramid[3].clone();
@@ -156,11 +157,8 @@ void ImageClass::FrameCapture (VideoCapture vidcap, string type )
     pyramid[0] = image.clone();  
     
     pyrDown(pyramid[0], pyramid[1]);
-    
     pyrDown(pyramid[1], pyramid[2]);
-    
     pyrDown(pyramid[2], pyramid[3]);
-    
     pyrDown(pyramid[3], pyramid[4]);
   
 }

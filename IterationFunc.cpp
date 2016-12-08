@@ -4,8 +4,8 @@
 #include <unsupported/Eigen/MatrixFunctions>
 
 #include <cstdio>
-#include<ctime>
-#include"opencv2/opencv.hpp"
+#include <ctime>
+#include "opencv2/opencv.hpp"
 #include <iostream>
 #include <opencv2/imgproc/imgproc.hpp>
 #include "ExternVariable.h"

@@ -10,10 +10,10 @@
 #define __odometry_code_6__GlobalOptimize__
 
 #include <cstdio>
-#include<ctime>
+#include <ctime>
 #include <cstdlib>
-#include"opencv2/opencv.hpp"
-#include<complex>
+#include "opencv2/opencv.hpp"
+#include <complex>
 #include <cmath>
 #include <iostream>
 #include <opencv2/imgproc/imgproc.hpp>

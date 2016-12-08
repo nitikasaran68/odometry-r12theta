@@ -53,19 +53,14 @@ void globalOptimize::calculateImageHistogram(frame *currentframe)
     //initializing current loop frame
     currentLoopFrame.isValid=true;
     currentLoopFrame.frameId=currentframe->frameId;
+
     currentLoopFrame.poseWrtWorld[0]=currentframe->poseWrtWorld[0];
     currentLoopFrame.poseWrtWorld[1]=currentframe->poseWrtWorld[1];
     currentLoopFrame.poseWrtWorld[2]=currentframe->poseWrtWorld[2];
-    currentLoopFrame.poseWrtWorld[3]=currentframe->poseWrtWorld[3];
-    currentLoopFrame.poseWrtWorld[4]=currentframe->poseWrtWorld[4];
-    currentLoopFrame.poseWrtWorld[5]=currentframe->poseWrtWorld[5];
     
     currentLoopFrame.poseWrtOrigin[0]=currentframe->poseWrtOrigin[0];
     currentLoopFrame.poseWrtOrigin[1]=currentframe->poseWrtOrigin[1];
     currentLoopFrame.poseWrtOrigin[2]=currentframe->poseWrtOrigin[2];
-    currentLoopFrame.poseWrtOrigin[3]=currentframe->poseWrtOrigin[3];
-    currentLoopFrame.poseWrtOrigin[4]=currentframe->poseWrtOrigin[4];
-    currentLoopFrame.poseWrtOrigin[5]=currentframe->poseWrtOrigin[5];
     
     currentLoopFrame.image=currentframe->image.clone();
     
@@ -84,7 +79,7 @@ void globalOptimize::calculateImageHistogram(frame *currentframe)
     float sum=0;
     for(int i=0;i<hsize;i++)
     {
-        sum+=currentLoopFrame.image_histogram.at<float>(i);
+        sum += currentLoopFrame.image_histogram.at<float>(i);
     }
     
     for(int i=0;i<hsize;i++)
@@ -235,16 +230,10 @@ void globalOptimize::pushToArray(frame *currentframe, depthMap* currentDepthMap)
     loopFrameArray[currentArrayId].poseWrtWorld[0]=currentframe->poseWrtWorld[0];
     loopFrameArray[currentArrayId].poseWrtWorld[1]=currentframe->poseWrtWorld[1];
     loopFrameArray[currentArrayId].poseWrtWorld[2]=currentframe->poseWrtWorld[2];
-    loopFrameArray[currentArrayId].poseWrtWorld[3]=currentframe->poseWrtWorld[3];
-    loopFrameArray[currentArrayId].poseWrtWorld[4]=currentframe->poseWrtWorld[4];
-    loopFrameArray[currentArrayId].poseWrtWorld[5]=currentframe->poseWrtWorld[5];
     
     loopFrameArray[currentArrayId].poseWrtOrigin[0]=currentframe->poseWrtOrigin[0];
     loopFrameArray[currentArrayId].poseWrtOrigin[1]=currentframe->poseWrtOrigin[1];
     loopFrameArray[currentArrayId].poseWrtOrigin[2]=currentframe->poseWrtOrigin[2];
-    loopFrameArray[currentArrayId].poseWrtOrigin[3]=currentframe->poseWrtOrigin[3];
-    loopFrameArray[currentArrayId].poseWrtOrigin[4]=currentframe->poseWrtOrigin[4];
-    loopFrameArray[currentArrayId].poseWrtOrigin[5]=currentframe->poseWrtOrigin[5];
     
     //updating keyframe to point to loopframe
     loopFrameArray[currentArrayId].this_currentDepthMap->keyFrame=loopFrameArray[currentArrayId].this_frame;
@@ -482,12 +471,14 @@ bool globalOptimize::findMatch(frame *currentframe, bool strayFlag)
 
 void globalOptimize::calculateRotationStats(float* pose1_0, float* pose2_0)
 {
-    rms_error=pow(pow(pose1_0[0]-pose2_0[0],2)+pow(pose1_0[1]-pose2_0[1],2)+pow(pose1_0[2]-pose2_0[2],2),0.5);
+    rms_error = pow(pow(pose1_0[0]-pose2_0[0],2)+pow(pose1_0[1]-pose2_0[1],2)+pow(pose1_0[2]-pose2_0[2],2),0.5);
+
     float view_vec1[3];
     float view_vec2[3];
     
     calculateViewVec(pose1_0, view_vec1);
     calculateViewVec(pose2_0, view_vec2);
+
     float mag1=pow(view_vec1[0]*view_vec1[0]+view_vec1[1]*view_vec1[1]+view_vec1[2]*view_vec1[2],0.5);
     float mag2=pow(view_vec2[0]*view_vec2[0]+view_vec2[1]*view_vec2[1]+view_vec2[2]*view_vec2[2],0.5);
     
@@ -497,16 +488,19 @@ void globalOptimize::calculateRotationStats(float* pose1_0, float* pose2_0)
 
 }
 
+
 void globalOptimize::calculateViewVec(float* pose, float* view_vec)
 {
-    //Create matrix in OpenCV
-    Mat se3=(Mat_<float>(4, 4) << 0,-pose[2],pose[1],pose[3], pose[2],0,-pose[0],pose[4], -pose[1],pose[0],0,pose[5],0,0,0,0);
-    // Map the OpenCV matrix with Eigen:
-    Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> se3_Eigen(se3.ptr<float>(), se3.rows, se3.cols);
-    // Take exp in Eigen and store in new Eigen matrix
-    Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> SE3_Eigen = se3_Eigen.exp(); //4x4 pose of Other wrt This (eigen)
-    // rotation matrix
-    Eigen::MatrixXf SE3_R=SE3_Eigen.block(0, 0, 3, 3);
+    float c = cos(poseWrtThis[2]);
+    float s = sin(poseWrtThis[2]);
+    float r1 = poseWrtThis[0];
+    float r2 = poseWrtThis[1]; 
+    
+    Mat SE3=(Mat_<float>(4, 4) << c,0,-s,-(r1*s),0,1,0,0,s,0,c,((r1*c)-r2),0,0,0,1);
+
+    Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> SE3_Eigen(SE3.ptr<float>(), SE3.rows, SE3.cols);
+    
+    Eigen::MatrixXf SE3_R = SE3_Eigen.block(0, 0, 3, 3);
     
     view_vec[0]=SE3_R(2,0);
     view_vec[1]=SE3_R(2,1);
@@ -514,6 +508,7 @@ void globalOptimize::calculateViewVec(float* pose, float* view_vec)
     return;
     
 }
+
 
 void globalOptimize::setSimAvgCenter()
 {
@@ -641,9 +636,6 @@ void globalOptimize::findMatchParallel(frame *testFrame, int thread_num)
                         initial_pose[0]=0.0f;
                         initial_pose[1]=0.0f;
                         initial_pose[2]=0.0f;
-                        initial_pose[3]=0.0f;
-                        initial_pose[4]=0.0f;
-                        initial_pose[5]=0.0f;
                         
                     }
                     
@@ -676,9 +668,6 @@ void globalOptimize::findMatchParallel(frame *testFrame, int thread_num)
                     testFrame->poseWrtWorld[0]=currentLoopFrame.poseWrtWorld[0];
                     testFrame->poseWrtWorld[1]=currentLoopFrame.poseWrtWorld[1];
                     testFrame->poseWrtWorld[2]=currentLoopFrame.poseWrtWorld[2];
-                    testFrame->poseWrtWorld[3]=currentLoopFrame.poseWrtWorld[3];
-                    testFrame->poseWrtWorld[4]=currentLoopFrame.poseWrtWorld[4];
-                    testFrame->poseWrtWorld[5]=currentLoopFrame.poseWrtWorld[5];
                     
                     
                     //updating to original pose
@@ -686,9 +675,6 @@ void globalOptimize::findMatchParallel(frame *testFrame, int thread_num)
                     testFrame->poseWrtOrigin[0]=currentLoopFrame.poseWrtOrigin[0];
                     testFrame->poseWrtOrigin[1]=currentLoopFrame.poseWrtOrigin[1];
                     testFrame->poseWrtOrigin[2]=currentLoopFrame.poseWrtOrigin[2];
-                    testFrame->poseWrtOrigin[3]=currentLoopFrame.poseWrtOrigin[3];
-                    testFrame->poseWrtOrigin[4]=currentLoopFrame.poseWrtOrigin[4];
-                    testFrame->poseWrtOrigin[5]=currentLoopFrame.poseWrtOrigin[5];
                     
                 }
                 
@@ -937,9 +923,6 @@ void globalOptimize::findConnection(frame *testFrame)
                     initial_pose[0]=0.0f;
                     initial_pose[1]=0.0f;
                     initial_pose[2]=0.0f;
-                    initial_pose[3]=0.0f;
-                    initial_pose[4]=0.0f;
-                    initial_pose[5]=0.0f;
                     
                 }
                 
@@ -955,6 +938,7 @@ void globalOptimize::findConnection(frame *testFrame)
                 //creating temp copy of depth map
                 temp_depthMap=new depthMap(*loopFrameArray[loopClosureArrayId].this_currentDepthMap);
                 temp_depthMap->keyFrame=loopFrameArray[loopClosureArrayId].this_currentDepthMap->keyFrame;
+                
                 temp_depthMap->depthvararrptr[0]=temp_depthMap->depthvararrpyr0;
                 temp_depthMap->depthvararrptr[1]=temp_depthMap->depthvararrpyr1;
                 temp_depthMap->depthvararrptr[2]=temp_depthMap->depthvararrpyr2;

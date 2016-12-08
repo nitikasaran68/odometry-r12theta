@@ -11,9 +11,9 @@
 #include <unsupported/Eigen/MatrixFunctions>
 
 #include <cstdio>
-#include<ctime>
+#include <ctime>
 #include <cstdlib>
-#include"opencv2/opencv.hpp"
+#include "opencv2/opencv.hpp"
 #include <complex>
 #include <iostream>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -39,10 +39,13 @@ using namespace cv;
 /*
 this function estimates pose of current frame w.r.t keyframe or ref frame (here named as prev frame) using gauss newton
 it can use either non-zero initialization or pose of tminus frame(i.e frame just prior to current frame) for initialization
-this is based on the hypothesis that the pose between consecutive frames differs by a small value, therefore initialization this way can lead to faster convergence of GN.
+this is based on the hypothesis that the pose between consecutive frames differs by a small value, 
+therefore initialization this way can lead to faster convergence of GN.
 
-this supports both pixel wise and non-pixel wise (i.e using entire matrix) pose estimation. these two are same except for that the former can be parallelized
-this supports both forward compositional gauss newton algo(that re-estimates gradient and weights in each iteration, and is slower) and inverse compositional gauss newton algo (that fixes or precomputes weights and gradient, and is faster)
+this supports both pixel wise and non-pixel wise (i.e using entire matrix) pose estimation. 
+These two are same except for that the former can be parallelized.
+This supports both forward compositional gauss newton algo (that re-estimates gradient and weights in each iteration, and is slower)
+and inverse compositional gauss newton algo (that fixes or precomputes weights and gradient, and is faster)
  
 finally using the estimated pose of current frame w.r.t keyframe, it also updates its world pose (pose w.r.t frame 1) and origin pose (frame w.r.t kf) variables
  
@@ -113,8 +116,8 @@ vector<float> GetImagePoseEstimate(frame* prev_frame, frame* current_frame, int 
     
     PRINTF("\nCalculating Image Pose Estimate using current frame: %d and previous frame: %d", current_frame->frameId ,prev_frame->frameId);
     
-    float pose[6];
-    float initial_rel_pose[6];
+    float pose[3];
+    float initial_rel_pose[3];
     /*
     pose[0]=tminus1_prev_frame->poseWrtOrigin[0];
     pose[1]=tminus1_prev_frame->poseWrtOrigin[1];
@@ -126,52 +129,44 @@ vector<float> GetImagePoseEstimate(frame* prev_frame, frame* current_frame, int 
     
     //initializing pose
     
-    if(!util::FLAG_INITIALIZE_NONZERO_POSE || fromLoopClosure) //if initialization flag off, then initialized with pose of tminus1 frame
+    //if initialization flag off, then initialized with pose of tminus1 frame
+    
+    if(!util::FLAG_INITIALIZE_NONZERO_POSE || fromLoopClosure)
     {
         pose[0]=0.0f;
         pose[1]=0.0f;
         pose[2]=0.0f;
-        pose[3]=0.0f;
-        pose[4]=0.0f;
-        pose[5]=0.0f;
         
         prev_frame->concatenateOriginPose(tminus1_prev_frame->poseWrtWorld, prev_frame->poseWrtWorld, pose);
         
     }
-    else //if initialization flag on, then initial world pose is converted to origin pose (w.r.t kf)
+    //if initialization flag on, then initial world pose is converted to origin pose (w.r.t kf)
+    else
     {
         pose[0]=initial_pose_estimate[0];
         pose[1]=initial_pose_estimate[1];
         pose[2]=initial_pose_estimate[2];
-        pose[3]=initial_pose_estimate[3];
-        pose[4]=initial_pose_estimate[4];
-        pose[5]=initial_pose_estimate[5];
         
         //rotation part comes from given initialzed pose
         prev_frame->concatenateOriginPose(initial_pose_estimate, prev_frame->poseWrtWorld, pose);
     
-        float pose_trans[6];
+        float pose_trans[3];
         prev_frame->concatenateOriginPose(tminus1_prev_frame->poseWrtWorld, prev_frame->poseWrtWorld, pose_trans);
         
         //translation part comes from tminus1 frame
         //another option is to initialzie translation as 0
-        pose[3]=pose_trans[3];
-        pose[4]=pose_trans[4];
-        pose[5]=pose_trans[5];
-
+        pose[0]=pose_trans[1];
+        pose[1]=pose_trans[1];
         
         initial_rel_pose[0]=pose[0];
         initial_rel_pose[1]=pose[1];
         initial_rel_pose[2]=pose[2];
-        initial_rel_pose[3]=pose[3];
-        initial_rel_pose[4]=pose[4];
-        initial_rel_pose[5]=pose[5];
         
-       // printf("\n\nINITIAL REL pose: %f, %f, %f, %f, %f, %f", initial_rel_pose[0], initial_rel_pose[1], initial_rel_pose[2], initial_rel_pose[3], initial_rel_pose[4], initial_rel_pose[5]);
+       // printf("\n\nINITIAL REL pose: %f, %f, %f", initial_rel_pose[0], initial_rel_pose[1], initial_rel_pose[2]);
     
     }
 
-    // printf("\n!!Initial Pose estimate: %f , %f , %f , %f , %f , %f", pose[0], pose[1], pose[2], pose[3], pose[4], pose[5]);
+    // printf("\n!!Initial Pose estimate: %f , %f , %f", pose[0], pose[1], pose[2]);
     
     //initializing flags for image display
     int display_initial_img_flag=0;
@@ -338,7 +333,7 @@ for (int level_counter=(util::MAX_PYRAMID_LEVEL-1); level_counter>=0; level_coun
 } //exit pyramid loop
 
     
-    PRINTF("\nUpdated pose: %f ,%f , %f , %f , %f , %f ",pose[0],pose[1],pose[2],pose[3],pose[4],pose[5]);
+    PRINTF("\nUpdated pose: %f ,%f , %f ",pose[0],pose[1],pose[2]);
     
     //update pose variables of current farme
     current_frame->calculatePoseWrtOrigin(prev_frame,pose); //saves pose w.r.t kf
@@ -354,7 +349,7 @@ for (int level_counter=(util::MAX_PYRAMID_LEVEL-1); level_counter>=0; level_coun
      */
 
     PRINTF("\nExiting frame loop..");
-    vector<float> posevec(pose, pose+6);
+    vector<float> posevec(pose, pose + 3);
     
     float elapsed=time_pose.stopTimeMeasure();
     //cout <<"\nTime calculate pixel wise parallel: "<<int(util::FLAG_DO_PARALLEL_POSE_ESTIMATION)<<"  "<<elapsed<<endl;

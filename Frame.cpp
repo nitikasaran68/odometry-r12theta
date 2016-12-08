@@ -496,54 +496,32 @@ void frame::calculateSE3poseOtherWrtThis(frame *other_frame) // this to other
     PRINTF("\nCalculating SE3 pose for This Frame with Id: %d Wrt to Other Frame with Id: %d", frameId, other_frame->frameId);
     float poseWrtThis[3];
     
-    /*poseWrtThis[0]=other_frame->poseWrtOrigin[0]-poseWrtOrigin[0]; //other wrt this
-    poseWrtThis[1]=other_frame->poseWrtOrigin[1]-poseWrtOrigin[1];
-    poseWrtThis[2]=other_frame->poseWrtOrigin[2]-poseWrtOrigin[2];
-    poseWrtThis[3]=other_frame->poseWrtOrigin[3]-poseWrtOrigin[3];
-    poseWrtThis[4]=other_frame->poseWrtOrigin[4]-poseWrtOrigin[4];
-    poseWrtThis[5]=other_frame->poseWrtOrigin[5]-poseWrtOrigin[5];*/
-    
     concatenateOriginPose(other_frame->poseWrtOrigin, poseWrtOrigin, poseWrtThis);
-    
-    
-   /* printf("\ncurrent_frame->poseWrtOrigin: %f ", poseWrtOrigin[0]);
-    printf("\ncurrent_frame->poseWrtOrigin: %f ", poseWrtOrigin[1]);
-    printf("\ncurrent_frame->poseWrtOrigin: %f ", poseWrtOrigin[2]);
-    printf("\ncurrent_frame->poseWrtOrigin: %f ", poseWrtOrigin[3]);
-    printf("\ncurrent_frame->poseWrtOrigin: %f ", poseWrtOrigin[4]);
-    printf("\ncurrent_frame->poseWrtOrigin: %f ", poseWrtOrigin[5]); */
-    
-    //Mat SE3pose= CalculateTransformationMatrix(poseWrtThis); //other wrt this
 
     float c = cos(poseWrtThis[2]);
     float s = sin(poseWrtThis[2]);
     float r1 = poseWrtThis[0];
     float r2 = poseWrtThis[1]; 
     
-    
-    //Create matrix in OpenCV, forms skew symmetric matrix
     Mat SE3=(Mat_<float>(4, 4) << c,0,-s,-(r1*s),0,1,0,0,s,0,c,((r1*c)-r2),0,0,0,1);
     
-    // Map the OpenCV matrix with Eigen:
     Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> SE3_Eigen(SE3.ptr<float>(), SE3.rows, SE3.cols);
     
-    //updating pose matrices
-    SE3poseOtherWrtThis=SE3_Eigen; //SE3 4x4 pose
-    SE3poseOtherWrtThis_r=SE3poseOtherWrtThis.block(0, 0, 3, 3); //Rotation 3X3
-    SE3poseOtherWrtThis_t=SE3poseOtherWrtThis.block(0, 3, 3, 1); //Translation 3X1
-    
-    SE3poseThisWrtOther=SE3poseOtherWrtThis.inverse();
-    SE3poseThisWrtOther_r=SE3poseThisWrtOther.block(0, 0, 3, 3);
-    SE3poseThisWrtOther_t=SE3poseThisWrtOther.block(0, 3, 3, 1);
+    // updating pose matrices
 
-   // K_SE3poseThisWrtOther=util::K_Eigen*SE3poseThisWrtOther;
-    K_SE3poseThisWrtOther_r=util::K_Eigen*SE3poseThisWrtOther_r;
-    K_SE3poseThisWrtOther_t=util::K_Eigen*SE3poseThisWrtOther_t;
+    SE3poseOtherWrtThis = SE3_Eigen;
+    SE3poseOtherWrtThis_r = SE3poseOtherWrtThis.block(0, 0, 3, 3);  //Rotation 3X3
+    SE3poseOtherWrtThis_t = SE3poseOtherWrtThis.block(0, 3, 3, 1);  //Translation 3X1
     
+    SE3poseThisWrtOther = SE3poseOtherWrtThis.inverse();
+    SE3poseThisWrtOther_r = SE3poseThisWrtOther.block(0, 0, 3, 3);
+    SE3poseThisWrtOther_t = SE3poseThisWrtOther.block(0, 3, 3, 1);
+
+    K_SE3poseThisWrtOther_r = util::K_Eigen*SE3poseThisWrtOther_r;
+    K_SE3poseThisWrtOther_t = util::K_Eigen*SE3poseThisWrtOther_t;
     
-    //K_SE3poseOtherWrtThis=util::K_Eigen*SE3poseOtherWrtThis;
-    K_SE3poseOtherWrtThis_r=util::K_Eigen*SE3poseOtherWrtThis_r;
-    K_SE3poseOtherWrtThis_t=util::K_Eigen*SE3poseOtherWrtThis_t;
+    K_SE3poseOtherWrtThis_r = util::K_Eigen*SE3poseOtherWrtThis_r;
+    K_SE3poseOtherWrtThis_t = util::K_Eigen*SE3poseOtherWrtThis_t;
     
 }
 
@@ -554,17 +532,17 @@ void frame::calculateSE3poseOtherWrtThis(frame *other_frame) // this to other
 void frame::calculateSim3poseOtherWrtThis(float scale_factor)
 {
     PRINTF("\nCalculating Sim3 pose for This Frame with Id: %d Wrt to Other Frame with recale factor: %f", frameId, scale_factor);
-    //Mat scale_mat=(Mat_<float>(3,3)<<scale_factor, 0, 0, 0, scale_factor, 0, 0, 0, scale_factor);
-    rescaleFactor=scale_factor; 
+
+    rescaleFactor = scale_factor; 
     
     Eigen::Matrix3f scale_mat;
     scale_mat<<scale_factor, 0, 0, 0, scale_factor, 0, 0, 0, scale_factor;
     
-    SE3poseThisWrtOther_r=scale_mat*SE3poseThisWrtOther_r;    
-    SE3poseOtherWrtThis_r=SE3poseThisWrtOther_r.inverse();
+    SE3poseThisWrtOther_r = scale_mat*SE3poseThisWrtOther_r;    
+    SE3poseOtherWrtThis_r = SE3poseThisWrtOther_r.inverse();
     
-    K_SE3poseThisWrtOther_r=util::K_Eigen*SE3poseThisWrtOther_r;
-    K_SE3poseOtherWrtThis_r=util::K_Eigen*SE3poseOtherWrtThis_r;
+    K_SE3poseThisWrtOther_r = util::K_Eigen*SE3poseThisWrtOther_r;
+    K_SE3poseOtherWrtThis_r = util::K_Eigen*SE3poseOtherWrtThis_r;
     
     //translation remains the same
     
@@ -603,6 +581,7 @@ void frame::calculateRandT()
     //cout<<"\nsim3 r: "<<Sim3_R;
     
 }
+
 
 void frame::calculateRelativeRandT(float* relPose)
 {
@@ -664,9 +643,11 @@ void frame::concatenateRelativePose(float *src_1wrt2, float *src_2wrt3, float *d
 
     Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> diff = dest_1wrt3_SE3Eigen2 - dest_1wrt3_SE3Eigen;
     float e = diff.norm();
+    float d = dest_1wrt2_SE3Eigen2.norm()
+
 
     if(e>0){
-        printf("CONCATENATE ERROR: %f\n",e);
+        printf("CONCATENATE REL ERROR: %f%%\n",(e/D)*100);
     }
 
 }
@@ -709,9 +690,10 @@ void frame::concatenateOriginPose(float *src_1wrt0, float *src_2wrt0, float *des
 
     Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> diff = dest_1wrt2_SE3Eigen2 - dest_1wrt2_SE3Eigen;
     float e = diff.norm();
+    float d = dest_1wrt2_SE3Eigen2.norm()
 
     if(e>0){
-        printf("CONCATENATE ERROR: %f\n",e);
+        printf("CONCATENATE ORIGIN ERROR: %f%%\n",(e/d)*100);
     }
     
 }
@@ -719,57 +701,78 @@ void frame::concatenateOriginPose(float *src_1wrt0, float *src_2wrt0, float *des
 
 void frame::calculateInvLiePose(float *pose)
 {
-    //Create matrix in OpenCV
-    Mat se3=(Mat_<float>(4, 4) << 0,-pose[2],pose[1],pose[3], pose[2],0,-pose[0],pose[4], -pose[1],pose[0],0,pose[5],0,0,0,0);
+    float c = cos(pose[2]);
+    float s = sin(pose[2]);
+    float r1 = pose[0];
+    float r2 = pose[1];
+
+    Mat SE3 = (Mat_<float>(4, 4) << c,0,-s,-(r1*s),0,1,0,0,s,0,c,((r1*c)-r2),0,0,0,1);
     
-    // Map the OpenCV matrix with Eigen:
-    Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> se3_Eigen(se3.ptr<float>(), se3.rows, se3.cols);
-    
-    // Take exp in Eigen and store in new Eigen matrix
-    Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> SE3_Eigen = se3_Eigen.exp();
+    Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> SE3_Eigen(SE3.ptr<float>(), SE3.rows, SE3.cols);
     
     Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> SE3_Eigen_inv = SE3_Eigen.inverse();
     
-    Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> se3_inv=  SE3_Eigen_inv.log();
-    
-    pose[0]=se3_inv(2,1);
-    pose[1]=se3_inv(0,2);
-    pose[2]=se3_inv(1,0);
-    pose[3]=se3_inv(0,3);
-    pose[4]=se3_inv(1,3);
-    pose[5]=se3_inv(2,3);
-    
-    
-    
-}
+    float temp = pose[0];
+    pose[0] = pose[1];
+    pose[1] = temp;
+    pose[2] = -pose[2];
 
+    c = cos(pose[2]);
+    s = sin(pose[2]);
+    r1 = pose[0];
+    r2 = pose[1];
+
+    SE3 = (Mat_<float>(4, 4) << c,0,-s,-(r1*s),0,1,0,0,s,0,c,((r1*c)-r2),0,0,0,1);
+    
+    Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> SE3_Eigen_inv2(SE3.ptr<float>(), SE3.rows, SE3.cols);
+    
+    Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> diff = SE3_Eigen_inv2 - SE3_Eigen_inv;
+    float e = diff.norm();
+    float d = SE3_Eigen_inv2.norm()
+
+    if(e>0){
+        printf("INVERSE ERROR: %f%%\n",(e/d)*100);
+    }
+
+}
 
 
 void frame::calculateInvLiePose(float *posesrc, float *posedest)
 {
-    //Create matrix in OpenCV
-    Mat se3=(Mat_<float>(4, 4) << 0,-posesrc[2],posesrc[1],posesrc[3], posesrc[2],0,-posesrc[0],posesrc[4], -posesrc[1],posesrc[0],0,posesrc[5],0,0,0,0);
+    float c = cos(posesrc[2]);
+    float s = sin(posesrc[2]);
+    float r1 = posesrc[0];
+    float r2 = posesrc[1];
+
+    Mat SE3 = (Mat_<float>(4, 4) << c,0,-s,-(r1*s),0,1,0,0,s,0,c,((r1*c)-r2),0,0,0,1);
     
-    // Map the OpenCV matrix with Eigen:
-    Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> se3_Eigen(se3.ptr<float>(), se3.rows, se3.cols);
-    
-    // Take exp in Eigen and store in new Eigen matrix
-    Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> SE3_Eigen = se3_Eigen.exp();
+    Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> SE3_Eigen(SE3.ptr<float>(), SE3.rows, SE3.cols);
     
     Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> SE3_Eigen_inv = SE3_Eigen.inverse();
     
-    Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> se3_inv=  SE3_Eigen_inv.log();
+    posedest[0] = posesrc[1];
+    posedest[1] = posesrc[0];
+    posedest[2] = -posesrc[2];
+
+    c = cos(posedest[2]);
+    s = sin(posedest[2]);
+    r1 = posedest[0];
+    r2 = posedest[1];
+
+    SE3 = (Mat_<float>(4, 4) << c,0,-s,-(r1*s),0,1,0,0,s,0,c,((r1*c)-r2),0,0,0,1);
     
-    posedest[0]=se3_inv(2,1);
-    posedest[1]=se3_inv(0,2);
-    posedest[2]=se3_inv(1,0);
-    posedest[3]=se3_inv(0,3);
-    posedest[4]=se3_inv(1,3);
-    posedest[5]=se3_inv(2,3);
+    Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> SE3_Eigen_inv2(SE3.ptr<float>(), SE3.rows, SE3.cols);
     
-    
+    Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> diff = SE3_Eigen_inv2 - SE3_Eigen_inv;
+    float e = diff.norm();
+    float d = SE3_Eigen_inv2.norm()
+
+    if(e>0){
+        printf("INVERSE ERROR: %f%%\n",(e/d)*100);
+    }
     
 }
+
 
 //finds maximum gradient, used in depth est.
 void frame::buildMaxGradients()
@@ -910,22 +913,27 @@ void frame::finaliseWeights()
     {
         //printf("\nFinalising weights for frame id: %d with weight count: %d at level: %d", frameId, numWeightsAdded[level], level);
         
-    if(numWeightsAdded[level] > 0)
-    {
-        weight_pyramid[level]=weight_pyramid[level]/numWeightsAdded[level];
-        //DisplayWeightsPixelWise(weight_pyramid[level], this, "Averaged Weights", frameId);
+        if(numWeightsAdded[level] > 0)
+        {
+            weight_pyramid[level]=weight_pyramid[level]/numWeightsAdded[level];
+            //DisplayWeightsPixelWise(weight_pyramid[level], this, "Averaged Weights", frameId);
+        }
+        else
+        {
+            printf("\nWeights cannot be averaged!!! ");
+        }
+
     }
-    else
-        printf("\nWeights cannot be averaged!!! ");
-        
-    }
+
     return;
 }
+
 
 //for saving mat object of type float to text file
 void frame::saveMatAsText(Mat save_mat, string name, string save_mat_path)
 {
     int id;
+    
     if(util::FLAG_ALTERNATE_GN_RA)
         id=(frameId+util::BATCH_START_ID-1);
     else
@@ -933,14 +941,14 @@ void frame::saveMatAsText(Mat save_mat, string name, string save_mat_path)
     
     stringstream ss;
     string type = ".txt";
-   // ss<<save_mat_path<<"/"<<frameId<<"_"<<name<<type;
-    ss<<save_mat_path<<"/"<<id<<"_"<<name<<type;
+
+    ss << save_mat_path << "/" << id << "_" << name << type;
     string filename = ss.str();
     ss.str("");
     ofstream txt_file;
     txt_file.open(filename);
     
-    cout<<"\nSaving mat image... "<<filename;
+    cout<<"\nSaving mat image... " << filename;
     
     //printf("\nrows: %d, cols: %d",save_mat.rows,save_mat.cols);
     
@@ -948,11 +956,13 @@ void frame::saveMatAsText(Mat save_mat, string name, string save_mat_path)
     for(int y=0;y<save_mat.rows;y++)
     {
         save_mat_ptr=save_mat.ptr<float>(y);
-        for(int x=0;x<save_mat.cols;x++)
+        
+        for(int x=0; x < save_mat.cols ;x++)
         {
-            txt_file<<save_mat_ptr[x]<<" ";
+            txt_file << save_mat_ptr[x] << " ";
         }
-        txt_file<<"\n";
+
+        txt_file << "\n";
     }
     
     txt_file.close();
@@ -972,24 +982,22 @@ void frame::makeMatFromText(Mat make_mat, string name, string read_txt_path)
     
     stringstream ss;
     string type = ".txt";
-    ss<<read_txt_path<<"/"<<id<<"_"<<name<<type;
-    //ss<<read_txt_path<<"/"<<frameId<<"_"<<name<<type;
+    ss<<read_txt_path << "/" << id << "_" << name << type;
+
     string filename = ss.str();
     ss.str("");
     ifstream txt_file;
     txt_file.open(filename);
     
-    cout<<"\nMaking mat image... "<<filename;
-    
-    //printf("\nrows: %d, cols: %d",save_mat.rows,save_mat.cols);
-    
+    cout << "\nMaking mat image... " << filename;
+        
     float* make_mat_ptr;
     for(int y=0;y<make_mat.rows;y++)
     {
         make_mat_ptr=make_mat.ptr<float>(y);
-        for(int x=0;x<make_mat.cols;x++)
+        for(int x=0; x < make_mat.cols; x++)
         {
-            txt_file>>make_mat_ptr[x];
+            txt_file >> make_mat_ptr[x];
         }
     }
     
@@ -999,6 +1007,7 @@ void frame::makeMatFromText(Mat make_mat, string name, string read_txt_path)
 
     
 }
+
 
 //requires an initialized make_mat object with predefined rows, cols, type(float)
 void frame::makeArrayFromText(float* make_arr, string name, string read_txt_path, int pyr_level)
@@ -1011,14 +1020,14 @@ void frame::makeArrayFromText(float* make_arr, string name, string read_txt_path
     
     stringstream ss;
     string type = ".txt";
-    //ss<<read_txt_path<<"/"<<frameId<<"_"<<name<<type;
-    ss<<read_txt_path<<"/"<<id<<"_"<<name<<type;
+
+    ss<<read_txt_path << "/" << id << "_" << name << type;
     string filename = ss.str();
     ss.str("");
     ifstream txt_file;
     txt_file.open(filename);
     
-    cout<<"\nMaking Array... "<<filename;
+    cout << "\nMaking Array... " << filename;
     
     int arr_size=0;
     switch (pyr_level)
@@ -1027,21 +1036,21 @@ void frame::makeArrayFromText(float* make_arr, string name, string read_txt_path
             arr_size=util::ORIG_COLS*util::ORIG_ROWS;
             break;
         case 1:
-            arr_size=(util::ORIG_ROWS>>1)*(util::ORIG_COLS>>1);
+            arr_size=(util::ORIG_ROWS >> 1)*(util::ORIG_COLS >> 1);
             break;
         case 2:
-            arr_size=(util::ORIG_ROWS>>2)*(util::ORIG_COLS>>2);
+            arr_size=(util::ORIG_ROWS >> 2)*(util::ORIG_COLS >> 2);
             break;
         case 3:
-            arr_size=(util::ORIG_ROWS>>3)*(util::ORIG_COLS>>3);
+            arr_size=(util::ORIG_ROWS >> 3)*(util::ORIG_COLS >> 3);
             break;
     }
     
     //printf("\nrows: %d, cols: %d",save_mat.rows,save_mat.cols);
     
-    for(int i=0;i<arr_size;i++)
+    for(int i=0; i < arr_size; i++)
     {
-        txt_file>>make_arr[i];
+        txt_file >> make_arr[i];
         
     }
     
@@ -1055,6 +1064,7 @@ void frame::makeArrayFromText(float* make_arr, string name, string read_txt_path
 void frame::saveArrayAsText(float* save_arr, string name, string save_arr_path, int pyr_level)
 {
     int id;
+
     if(util::FLAG_ALTERNATE_GN_RA)
         id=(frameId+util::BATCH_START_ID-1);
     else
@@ -1062,8 +1072,8 @@ void frame::saveArrayAsText(float* save_arr, string name, string save_arr_path, 
     
     stringstream ss;
     string type = ".txt";
-    //ss<<save_arr_path<<"/"<<frameId<<"_"<<name<<type;
-    ss<<save_arr_path<<"/"<<id<<"_"<<name<<type;
+
+    ss << save_arr_path << "/" << id << "_" << name << type;
     string filename = ss.str();
     ss.str("");
     ofstream txt_file;
@@ -1080,20 +1090,20 @@ void frame::saveArrayAsText(float* save_arr, string name, string save_arr_path, 
             arr_size=util::ORIG_COLS*util::ORIG_ROWS;
             break;
         case 1:
-            arr_size=(util::ORIG_ROWS>>1)*(util::ORIG_COLS>>1);
+            arr_size=(util::ORIG_ROWS >> 1)*(util::ORIG_COLS >> 1);
             break;
         case 2:
-            arr_size=(util::ORIG_ROWS>>2)*(util::ORIG_COLS>>2);
+            arr_size=(util::ORIG_ROWS >> 2)*(util::ORIG_COLS >> 2);
             break;
         case 3:
-            arr_size=(util::ORIG_ROWS>>3)*(util::ORIG_COLS>>3);
+            arr_size=(util::ORIG_ROWS >> 3)*(util::ORIG_COLS >> 3);
             break;
     }
 
     
     for(int i=0;i<arr_size;i++)
     {
-        txt_file<<save_arr[i]<<" ";
+        txt_file << save_arr[i] << " ";
     }
     
     txt_file.close();
@@ -1103,27 +1113,26 @@ void frame::saveArrayAsText(float* save_arr, string name, string save_arr_path, 
     
 }
 
+
 void frame::makeDepthHypothesisFromText(depthhypothesis* make_depth_hypo, string name, string read_txt_path)
 {
  
     stringstream ss;
     string type = ".txt";
-    ss<<read_txt_path<<"/"<<frameId<<"_"<<name<<type;
+    ss << read_txt_path << "/" << frameId << "_" << name << type;
     string filename = ss.str();
     ss.str("");
     ifstream txt_file;
     txt_file.open(filename);
-    
-    //cout<<"\nMaking Array... "<<filename;
-    
+        
     float depth_val;
     
     for(int y=0;y<util::ORIG_ROWS;y++)
     {
         for(int x=0;x<util::ORIG_COLS;x++)
         {
-            depthhypothesis* ptr=make_depth_hypo+util::ORIG_COLS*y+x;
-            txt_file>>depth_val;
+            depthhypothesis* ptr = make_depth_hypo + util::ORIG_COLS * y + x;
+            txt_file >> depth_val;
             ptr->invDepth=1/depth_val;
             if(depth_val<=0)
                 ptr->isValid=0;

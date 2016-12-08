@@ -127,11 +127,11 @@ public:
     //depthhypothesis* pixels;
     
     //Pose matrices
-    float poseWrtOrigin[6]; //wrt KF
+    float poseWrtOrigin[3]; //wrt KF
     
-    float poseWrtWorld[6]; //w.r.t world, i.e first frame
+    float poseWrtWorld[3]; //w.r.t world, i.e first frame
     
-    float truePoseWrtWorld[6];
+    float truePoseWrtWorld[3];
     
     float rescaleFactor; //wrt KF
     
