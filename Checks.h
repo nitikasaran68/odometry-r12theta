@@ -106,7 +106,7 @@ namespace check {
     {
         count_for_keyframe_prop++;
         
-        float weighted_pose_for_keyframe_switching = (abs(current_frame->poseWrtOrigin[0]*util::weight[0])+abs(current_frame->poseWrtOrigin[1]*util::weight[1])+abs(current_frame->poseWrtOrigin[2]*util::weight[2]);
+        float weighted_pose_for_keyframe_switching = abs(current_frame->poseWrtOrigin[0]*util::weight[0])+abs(current_frame->poseWrtOrigin[1]*util::weight[1])+abs(current_frame->poseWrtOrigin[2]*util::weight[2]);
 
         cout<<"\n weighted pose for keyframe prop :  "<<weighted_pose_for_keyframe_switching/1000.0f<<endl;
         

@@ -54,6 +54,7 @@ fromLoopClosure: which indicates whether this function is being called during lo
 hom: not used (was for homograohy)
  
 */
+
 vector<float> GetImagePoseEstimate(frame* prev_frame, frame* current_frame, int frame_num,depthMap* currDepthMap,frame* tminus1_prev_frame,float* initial_pose_estimate,bool fromLoopClosure, bool homo)
 {
     
@@ -67,57 +68,37 @@ vector<float> GetImagePoseEstimate(frame* prev_frame, frame* current_frame, int 
     {
         //make depth mats from text file
         prev_frame->makeMatFromText(prev_frame->depth, "Depth", util::SAVED_MATS_PATH);
-        //DisplayColouredDepth(prev_frame->depth, prev_frame->image);
-        
         prev_frame->makeMatFromText(prev_frame->depth_pyramid[0], "Depth_pyr0", util::SAVED_MATS_PATH);
-//        prev_frame->makeMatFromText(prev_frame->depth_pyramid[1], "Depth_pyr1", util::SAVED_MATS_PATH);
-//        prev_frame->makeMatFromText(prev_frame->depth_pyramid[2], "Depth_pyr2", util::SAVED_MATS_PATH);
-//        prev_frame->makeMatFromText(prev_frame->depth_pyramid[3], "Depth_pyr3", util::SAVED_MATS_PATH);
-        
-        //make depth var arrays from text file
         prev_frame->makeArrayFromText(currDepthMap->depthvararrpyr0, "DepthVarArr_pyr0", util::SAVED_MATS_PATH, 0);
-//        prev_frame->makeArrayFromText(currDepthMap->depthvararrpyr1, "DepthVarArr_pyr1", util::SAVED_MATS_PATH, 1);
-//        prev_frame->makeArrayFromText(currDepthMap->depthvararrpyr2, "DepthVarArr_pyr2", util::SAVED_MATS_PATH, 2);
-//        prev_frame->makeArrayFromText(currDepthMap->depthvararrpyr3, "DepthVarArr_pyr3", util::SAVED_MATS_PATH, 3);
-        
-        //saving depth to current depth map hypothesis
-        //current_frame->makeDepthHypothesisFromText(currDepthMap->currentDepthHypothesis, "Depth", util::SAVED_MATS_PATH);
     }
     
     
     
     //only saves keyframe mats and arrays at the highest level
-    
     //when alternate_gn_ra is on then Flag_save_mats is On only for one keyframe prop
     //when alterna_gn_ra is off,then for less than 50
     //when alternate_gn_ra is on and bootstrap is on, then for less than 50
-    if(util::FLAG_SAVE_MATS && !fromLoopClosure && (current_frame->frameId%util::KEYFRAME_PROPAGATE_INTERVAL==0) )
-   
+
+    if( util::FLAG_SAVE_MATS && !fromLoopClosure && (current_frame->frameId%util::KEYFRAME_PROPAGATE_INTERVAL==0) )
     {
         if((util::FLAG_ALTERNATE_GN_RA && util::NUM_GN_PROPAGATION<2 && util::GAUSS_NEWTON_FLAG_ON) || ((!util::FLAG_ALTERNATE_GN_RA) && (current_frame->frameId<50)) || ((util::FLAG_ALTERNATE_GN_RA) && (util::FLAG_IS_BOOTSTRAP) &&(current_frame->frameId<50)))
-    {
+        {
         
-        prev_frame->saveMatAsText(prev_frame->depth, "Depth", util::SAVED_MATS_PATH);
-        prev_frame->saveMatAsText(prev_frame->depth_pyramid[0], "Depth_pyr0", util::SAVED_MATS_PATH);
-//        prev_frame->saveMatAsText(prev_frame->depth_pyramid[1], "Depth_pyr1", util::SAVED_MATS_PATH);
-//        prev_frame->saveMatAsText(prev_frame->depth_pyramid[2], "Depth_pyr2", util::SAVED_MATS_PATH);
-//        prev_frame->saveMatAsText(prev_frame->depth_pyramid[3], "Depth_pyr3", u .til::SAVED_MATS_PATH);
-        
-        prev_frame->saveArrayAsText(currDepthMap->depthvararrpyr0, "DepthVarArr_pyr0", util::SAVED_MATS_PATH, 0);
-//        prev_frame->saveArrayAsText(currDepthMap->depthvararrpyr1, "DepthVarArr_pyr1", util::SAVED_MATS_PATH, 1);
-//        prev_frame->saveArrayAsText(currDepthMap->depthvararrpyr2, "DepthVarArr_pyr2", util::SAVED_MATS_PATH, 2);
-//        prev_frame->saveArrayAsText(currDepthMap->depthvararrpyr3, "DepthVarArr_pyr3", util::SAVED_MATS_PATH, 3);
+            prev_frame->saveMatAsText(prev_frame->depth, "Depth", util::SAVED_MATS_PATH);
+            prev_frame->saveMatAsText(prev_frame->depth_pyramid[0], "Depth_pyr0", util::SAVED_MATS_PATH);
+            prev_frame->saveArrayAsText(currDepthMap->depthvararrpyr0, "DepthVarArr_pyr0", util::SAVED_MATS_PATH, 0);
     
-    }
+        }
     }
     
 
     //Mat rotFrmHomo=performHomography(prev_frame, current_frame);
     
-    PRINTF("\nCalculating Image Pose Estimate using current frame: %d and previous frame: %d", current_frame->frameId ,prev_frame->frameId);
+    printf("\nCalculating Image Pose Estimate using current frame: %d and previous frame: %d", current_frame->frameId ,prev_frame->frameId);
     
     float pose[3];
     float initial_rel_pose[3];
+
     /*
     pose[0]=tminus1_prev_frame->poseWrtOrigin[0];
     pose[1]=tminus1_prev_frame->poseWrtOrigin[1];
@@ -166,7 +147,7 @@ vector<float> GetImagePoseEstimate(frame* prev_frame, frame* current_frame, int 
     
     }
 
-    // printf("\n!!Initial Pose estimate: %f , %f , %f", pose[0], pose[1], pose[2]);
+    printf("\n!!Initial Pose estimate: %f , %f , %f", pose[0], pose[1], pose[2]);
     
     //initializing flags for image display
     int display_initial_img_flag=0;
@@ -176,177 +157,175 @@ vector<float> GetImagePoseEstimate(frame* prev_frame, frame* current_frame, int 
     
     
     
-  //*******ENTER PYRAMID LOOP*******//
+    /*----------- ENTER PYRAMID LOOP ------------*/
 
-for (int level_counter=(util::MAX_PYRAMID_LEVEL-1); level_counter>=0; level_counter--)
-{
-    
-    //*******PRECOMPUTATION BEGINS*******//
-    
-    //printf("\nPyramid level: %d",level_counter);
-    
-    //updates pyramid dependent farme parameters
-    prev_frame->updationOnPyrChange(level_counter);
-    current_frame->updationOnPyrChange(level_counter,false);
-
-    
-    //2 instances created here, however, only 1 used at a time
-    Pyramid workingPyramid(prev_frame, current_frame, pose,currDepthMap); // normal working pyramid
-    PixelWisePyramid workingPixelPyramid(prev_frame, current_frame, pose,currDepthMap); //pixel-wise working pyramid that can be parallelized
-    
-    
-    //initialization!
-    //CASE 1: when non-parallel pose est. OR when normal (i.e. non-constant weight) loop closure pose est.
-    if(!util::FLAG_DO_PARALLEL_POSE_ESTIMATION || (!util::FLAG_DO_CONST_WEIGHT_POSE_ESTIMATION && fromLoopClosure))
+    for (int level_counter=(util::MAX_PYRAMID_LEVEL-1); level_counter>=0; level_counter--)
     {
-        workingPyramid.putPreviousPose(tminus1_prev_frame);
-        workingPyramid.pose=pose;
-    
-    //Perform precomputation--Calculation of steepest descent,hessian inverse & world points.
-    workingPyramid.performPrecomputation();
         
-    }
-    
-    //CASE 2: when parallel pose est OR when constant weight loop closure pose est.
-    if(util::FLAG_DO_PARALLEL_POSE_ESTIMATION || (util::FLAG_DO_CONST_WEIGHT_POSE_ESTIMATION && fromLoopClosure))
-    {
-        workingPixelPyramid.putPreviousPose(tminus1_prev_frame);
-        workingPixelPyramid.pose=pose;
-    }
-
-    display_orig_img_flag=0; //reset flag
-    int disp_iter_counter=0;
-    
-    
-    //*******ENTER ITERATION LOOP*******//
-    
-    for(iter_counter=0; iter_counter<util::MAX_ITER[level_counter];  ++iter_counter)
-    {
-        disp_iter_counter=iter_counter;
-
-        //printf("\nIteration: %d ",iter_counter);
+        /*------------ PRECOMPUTATION BEGINS -----------*/
         
-        //Perform iteration steps-- Calculation of warped points,warped image & residual. Also updates pose and checks condition for loop termination.
+        //printf("\nPyramid level: %d",level_counter);
+        
+        //updates pyramid dependent farme parameters
+        prev_frame->updationOnPyrChange(level_counter);
+        current_frame->updationOnPyrChange(level_counter,false);
 
         
+        //2 instances created here, however, only 1 used at a time
+        Pyramid workingPyramid(prev_frame, current_frame, pose,currDepthMap); // normal working pyramid
+        PixelWisePyramid workingPixelPyramid(prev_frame, current_frame, pose,currDepthMap); //pixel-wise working pyramid that can be parallelized
+        
+        
+        //initialization!
         //CASE 1: when non-parallel pose est. OR when normal (i.e. non-constant weight) loop closure pose est.
         if(!util::FLAG_DO_PARALLEL_POSE_ESTIMATION || (!util::FLAG_DO_CONST_WEIGHT_POSE_ESTIMATION && fromLoopClosure))
         {
-            float check_termination=workingPyramid.performIterationSteps();
-            if(workingPyramid.weightedPose<1.0f) //if true, pose change insignificant, therefore terminate iteration at this level
-                iter_counter=util::MAX_ITER[level_counter]-1;
-            
-            //to display current iteration residual
-            if(util::FLAG_DISPLAY_IMAGES)
-            {
-                DisplayIterationRes(prev_frame, workingPyramid.residual, "Iteration Residual", frame_num,homo);
-                DisplayWeights(prev_frame, workingPyramid.weights, "Weight Image", frame_num, homo);
-                
-                //to display original image residual and original image
-                if(display_initial_img_flag==0)
-                {
-                    //display initial residual
-                    DisplayInitialRes(current_frame,prev_frame,"Initial Residual", frame_num,homo);
-                    
-                    display_initial_img_flag=1; //set flag
-                }
-                //diplay original image
-                if(display_orig_img_flag==0)
-                {
-                    DisplayOriginalImg(workingPyramid.saveImg,prev_frame,"Original Image", frame_num,homo);
-                    display_orig_img_flag=1; //set flag
-                }
-
-                //to display warped image
-                DisplayWarpedImg(workingPyramid.warpedImage, prev_frame, "Warped Image", frame_num,homo);
-            }
-            
-            
+            printf("case 1\n");
+            workingPyramid.putPreviousPose(tminus1_prev_frame);
+            workingPyramid.pose=pose;
+        
+            //Perform precomputation--Calculation of steepest descent,hessian inverse & world points.
+            workingPyramid.performPrecomputation();
         }
         
         //CASE 2: when parallel pose est OR when constant weight loop closure pose est.
-        if(util::FLAG_DO_PARALLEL_POSE_ESTIMATION || (util::FLAG_DO_CONST_WEIGHT_POSE_ESTIMATION && fromLoopClosure)) //for pixel-wise
+        if(util::FLAG_DO_PARALLEL_POSE_ESTIMATION || (util::FLAG_DO_CONST_WEIGHT_POSE_ESTIMATION && fromLoopClosure))
         {
-            //printf("\nDo parallel pose: %d , do const weight: %d, from loop closure: %d, iter: %d", util::FLAG_DO_PARALLEL_POSE_ESTIMATION, util::FLAG_DO_CONST_WEIGHT_POSE_ESTIMATION, fromLoopClosure, iter_counter);
-           
-            //if using constant weight, then perform inverse compositional GN
-            if(fromLoopClosure && util::FLAG_DO_CONST_WEIGHT_POSE_ESTIMATION)
-            {
-                workingPixelPyramid.calculatePixelWiseParallelInvCompositional(iter_counter); //when from loop closure and const weight flag set
-            }
-            else //else the normal pixel-wise GN
-            {
-               workingPixelPyramid.calculatePixelWiseParallel(); //when not from loop closure or const weight flag not set
-            }
-            
-            //check termination
-            if(workingPixelPyramid.weightedPose<1.0f) //if true, pose change insignificant, therefore terminate iteration at this level
-                iter_counter=util::MAX_ITER[level_counter]-1;
-            
-            //to display current iteration residual
-            if(util::FLAG_DISPLAY_IMAGES)
-            {
-                DisplayIterationResPixelWise(workingPixelPyramid.display_iterationres, prev_frame,"Iteration Residual",frame_num,homo);
-                DisplayWeightsPixelWise(workingPixelPyramid.display_weightimg, prev_frame, "Weight Image", frame_num, homo);
+            printf("case 2\n");
+            workingPixelPyramid.putPreviousPose(tminus1_prev_frame);
+            workingPixelPyramid.pose = pose;
+        }
 
-                //to display original image residual and original image
-                if(display_initial_img_flag==0)
-                {
-                    //display initial residual
-                    DisplayInitialRes(current_frame,prev_frame,"Initial Residual", frame_num,homo);
-                       waitKey(1000);
-                    display_initial_img_flag=1; //set flag
-                }
-                //diplay original image
-                if(display_orig_img_flag==0)
-                {
-                    DisplayOriginalImgPixelWise(workingPixelPyramid.prev_frame->image_pyramid[level_counter], prev_frame, "Original Image", frame_num,homo);
-                    display_orig_img_flag=1; //set flag
+        display_orig_img_flag=0; //reset flag
+        int disp_iter_counter=0;
+        
+        
+        //*******ENTER ITERATION LOOP*******//
+        
+        for(iter_counter=0; iter_counter<util::MAX_ITER[level_counter];  ++iter_counter)
+        {
+            disp_iter_counter=iter_counter;
 
+            //printf("\nIteration: %d ",iter_counter);
+            
+            //Perform iteration steps-- Calculation of warped points,warped image & residual. Also updates pose and checks condition for loop termination.
+
+            
+            //CASE 1: when non-parallel pose est. OR when normal (i.e. non-constant weight) loop closure pose est.
+            if(!util::FLAG_DO_PARALLEL_POSE_ESTIMATION || (!util::FLAG_DO_CONST_WEIGHT_POSE_ESTIMATION && fromLoopClosure))
+            {
+                float check_termination=workingPyramid.performIterationSteps();
+                if(workingPyramid.weightedPose<1.0f) //if true, pose change insignificant, therefore terminate iteration at this level
+                    iter_counter=util::MAX_ITER[level_counter]-1;
+                
+                //to display current iteration residual
+                if(util::FLAG_DISPLAY_IMAGES)
+                {
+                    DisplayIterationRes(prev_frame, workingPyramid.residual, "Iteration Residual", frame_num,homo);
+                    DisplayWeights(prev_frame, workingPyramid.weights, "Weight Image", frame_num, homo);
+                    
+                    //to display original image residual and original image
+                    if(display_initial_img_flag==0)
+                    {
+                        //display initial residual
+                        DisplayInitialRes(current_frame,prev_frame,"Initial Residual", frame_num,homo);
+                        
+                        display_initial_img_flag=1; //set flag
+                    }
+                    //diplay original image
+                    if(display_orig_img_flag==0)
+                    {
+                        DisplayOriginalImg(workingPyramid.saveImg,prev_frame,"Original Image", frame_num,homo);
+                        display_orig_img_flag=1; //set flag
+                    }
+
+                    //to display warped image
+                    DisplayWarpedImg(workingPyramid.warpedImage, prev_frame, "Warped Image", frame_num,homo);
                 }
                 
-                //to display warped image
-                DisplayWarpedImgPxelWise(workingPixelPyramid.display_warpedimg, prev_frame, "Warped Image", frame_num,homo);
-
+                
             }
-            if(util::FLAG_DO_CONST_WEIGHT_POSE_ESTIMATION && !fromLoopClosure)
+            
+            //CASE 2: when parallel pose est OR when constant weight loop closure pose est.
+            if(util::FLAG_DO_PARALLEL_POSE_ESTIMATION || (util::FLAG_DO_CONST_WEIGHT_POSE_ESTIMATION && fromLoopClosure)) //for pixel-wise
             {
-                //save final weights at end of every level
-                if(iter_counter==util::MAX_ITER[level_counter]-1)
+                //printf("\nDo parallel pose: %d , do const weight: %d, from loop closure: %d, iter: %d", util::FLAG_DO_PARALLEL_POSE_ESTIMATION, util::FLAG_DO_CONST_WEIGHT_POSE_ESTIMATION, fromLoopClosure, iter_counter);
+               
+                //if using constant weight, then perform inverse compositional GN
+                if(fromLoopClosure && util::FLAG_DO_CONST_WEIGHT_POSE_ESTIMATION)
                 {
-                    workingPixelPyramid.saveWeights(true);
-                    //DisplayWeightsPixelWise(current_frame->weights, prev_frame, "Saved Weight Image", frame_num);
+                    workingPixelPyramid.calculatePixelWiseParallelInvCompositional(iter_counter); //when from loop closure and const weight flag set
+                }
+                else //else the normal pixel-wise GN
+                {
+                   workingPixelPyramid.calculatePixelWiseParallel(); //when not from loop closure or const weight flag not set
+                }
+                
+                //if true, pose change insignificant, therefore terminate iteration at this level
+                if(workingPixelPyramid.weightedPose<1.0f)
+                {
+                    printf("\nInsignificant change!\n");
+                    printf("%f\n",workingPixelPyramid.weightedPose);
+                    iter_counter=util::MAX_ITER[level_counter]-1;
+                }
+
+                //to display current iteration residual
+                if(util::FLAG_DISPLAY_IMAGES)
+                {
+                    DisplayIterationResPixelWise(workingPixelPyramid.display_iterationres, prev_frame,"Iteration Residual",frame_num,homo);
+                    DisplayWeightsPixelWise(workingPixelPyramid.display_weightimg, prev_frame, "Weight Image", frame_num, homo);
+
+                    //to display original image residual and original image
+                    if(display_initial_img_flag==0)
+                    {
+                        //display initial residual
+                        DisplayInitialRes(current_frame,prev_frame,"Initial Residual", frame_num,homo);
+                           waitKey(1000);
+                        display_initial_img_flag=1; //set flag
+                    }
+                    //diplay original image
+                    if(display_orig_img_flag==0)
+                    {
+                        DisplayOriginalImgPixelWise(workingPixelPyramid.prev_frame->image_pyramid[level_counter], prev_frame, "Original Image", frame_num,homo);
+                        display_orig_img_flag=1; //set flag
+
+                    }
+                    
+                    //to display warped image
+                    DisplayWarpedImgPxelWise(workingPixelPyramid.display_warpedimg, prev_frame, "Warped Image", frame_num,homo);
+
+                }
+                if(util::FLAG_DO_CONST_WEIGHT_POSE_ESTIMATION && !fromLoopClosure)
+                {
+                    //save final weights at end of every level
+                    if(iter_counter==util::MAX_ITER[level_counter]-1)
+                    {
+                        workingPixelPyramid.saveWeights(true);
+                        //DisplayWeightsPixelWise(current_frame->weights, prev_frame, "Saved Weight Image", frame_num);
+                    }
                 }
             }
-        }
+            
+            //printf("\nupdated pose: %f , %f , %f , %f , %f , %f ",pose[0],pose[1],pose[2],pose[3],pose[4],pose[5]);
+           // printf("\nFINAL REL pose: %f, %f, %f, %f, %f, %f", pose[0],pose[1],pose[2],pose[3],pose[4],pose[5]);
         
-        //printf("\nupdated pose: %f , %f , %f , %f , %f , %f ",pose[0],pose[1],pose[2],pose[3],pose[4],pose[5]);
-       // printf("\nFINAL REL pose: %f, %f, %f, %f, %f, %f", pose[0],pose[1],pose[2],pose[3],pose[4],pose[5]);
-    
-    } //exit iteration loop
-    
+        } //exit iteration loop
+        
 
-    PRINTF("\nSummary: For previous frameId: %d, current frameId: %d ", prev_frame->frameId, current_frame->frameId);
-   // printf("\nAt Pyramid Level: %d , Max Iteration: %d ",level_counter,disp_iter_counter+1);
+        PRINTF("\nSummary: For previous frameId: %d, current frameId: %d ", prev_frame->frameId, current_frame->frameId);
+       // printf("\nAt Pyramid Level: %d , Max Iteration: %d ",level_counter,disp_iter_counter+1);
 
-    
-} //exit pyramid loop
+        
+    } //exit pyramid loop
 
     
-    PRINTF("\nUpdated pose: %f ,%f , %f ",pose[0],pose[1],pose[2]);
+    printf("\nEstimated pose: %f ,%f , %f ",pose[0],pose[1],pose[2]);
     
     //update pose variables of current farme
     current_frame->calculatePoseWrtOrigin(prev_frame,pose); //saves pose w.r.t kf
     current_frame->calculatePoseWrtWorld(prev_frame,pose); //saves pose w.r.t world
     current_frame->calculateRandT(); //extracts rot matrix and ranslation from pose
     
-    /*
-    if (myfile->is_open())
-    {
-        *myfile<<current_frame->frameId<<" "<<current_frame->SE3_T(0,0)<<" "<<current_frame->SE3_T(1,0)<<" "<<current_frame->SE3_T(2,0)<<" "<<current_frame->SE3_R(0,0)<<" "<<current_frame->SE3_R(0,1)<<" "<<current_frame->SE3_R(0,2)<<" "<<current_frame->SE3_R(1,0)<<" "<<current_frame->SE3_R(1,1)<<" "<<current_frame->SE3_R(1,2)<<" "<<current_frame->SE3_R(2,0)<<" "<<current_frame->SE3_R(2,1)<<" "<<current_frame->SE3_R(2,2)<<"\n";
-        
-    }
-     */
 
     PRINTF("\nExiting frame loop..");
     vector<float> posevec(pose, pose + 3);

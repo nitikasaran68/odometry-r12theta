@@ -21,7 +21,7 @@ Pyramid::Pyramid(frame* prevframe,frame* currentframe,float* pose,depthMap* curr
     //this->pose=pose;
     
     //initialization of all matrices
-    steepestDescent=Mat(prev_frame->no_nonZeroDepthPts,6,CV_32FC1);//steepest descent matrix (Nx6)
+    steepestDescent=Mat(prev_frame->no_nonZeroDepthPts,3,CV_32FC1);//steepest descent matrix (Nx6)
     saveImg= Mat(1, prev_frame->no_nonZeroDepthPts, CV_32FC1); //save intensity of prev image at non zero depth points for current pyramid level
     worldPoints=Mat(3,prev_frame->no_nonZeroDepthPts,CV_32FC1); //saves world points (X,Y,Z) in the frame of ref of prev image
     transformedWorldPoints=Mat(3,prev_frame->no_nonZeroDepthPts,CV_32FC1); //saves world points in the frame of ref of current img
@@ -53,8 +53,8 @@ void Pyramid::calculateSteepestDescent()
     
     //*******INITIALIZE VAR*******//
     
-    Mat jacobian_top(prev_frame->no_nonZeroDepthPts,6, CV_32FC1); //top row of jacobian correspoding to x (Nx6)
-    Mat jacobian_bottom(prev_frame->no_nonZeroDepthPts,6, CV_32FC1); //bottom row of jacobian corresponding to y (Nx6)
+    Mat jacobian_top(prev_frame->no_nonZeroDepthPts,3, CV_32FC1); //top row of jacobian correspoding to x (Nx6)
+    Mat jacobian_bottom(prev_frame->no_nonZeroDepthPts,3, CV_32FC1); //bottom row of jacobian corresponding to y (Nx6)
     
     //cout<<"\n\n\nGRADIENT POINTER:  "<<(gradx.type()==CV_32FC1);
     
@@ -147,28 +147,16 @@ void Pyramid::calculateSteepestDescent()
             
             gradxwarp[idx]=gradx;
             gradywarp[idx]=grady;
-            
-            //pre-computed jacobian expression assuming lie algebra pose parameters to be 0
-            //matlab proof available
-            jacob_bottom_ptr[jac_counter]  = grady*(-(resized_fy + (pow((-resized_cy + i),2) / resized_fy)));
-            jacob_top_ptr[jac_counter++] = gradx*(-((-resized_cy + i)*(-resized_cx + j)) / resized_fy);
+
+            jacob_bottom_ptr[jac_counter]  = grady*((resized_cy - i) * pow(depth_ptr[idx],-1));
+            jacob_top_ptr[jac_counter++] = gradx*((resized_cx - j) * pow(depth_ptr[idx],-1));
+
+            jacob_bottom_ptr[jac_counter]  = grady*(-(resized_cy - i) * pow(depth_ptr[idx],-1));
+            jacob_top_ptr[jac_counter++] = gradx*(-(resized_cx - j) * pow(depth_ptr[idx],-1));
             
             jacob_bottom_ptr[jac_counter]=grady*(((-resized_cy + i)*(-resized_cx + j)) / resized_fx);
-            jacob_top_ptr[jac_counter++] = gradx*(resized_fx + (pow((-resized_cx + j),2) / resized_fx));
-            
-            jacob_bottom_ptr[jac_counter]=grady*((resized_fy*(-resized_cx + j)) / resized_fx);
-            jacob_top_ptr[jac_counter++]  = gradx*(-(resized_fx*(-resized_cy + i) / resized_fy));
-            
-            jacob_bottom_ptr[jac_counter]=0;
-            jacob_top_ptr[jac_counter++]  =gradx*( resized_fx*(pow(depth_ptr[idx],-1)));
-            
-            jacob_bottom_ptr[jac_counter]= grady*(resized_fy*(pow(depth_ptr[idx],-1)));
-            jacob_top_ptr[jac_counter++]  = 0;
-            
-            jacob_bottom_ptr[jac_counter]= grady*(-(-resized_cy + i) *(pow(depth_ptr[idx],-1)));
-            jacob_top_ptr[jac_counter++]  = gradx*(-(-resized_cx + j) *(pow(depth_ptr[idx],-1)));
-            
-            
+            jacob_top_ptr[jac_counter++]= gradx*(- resized_fx - (pow((-resized_cx + j),2) / resized_fx));
+                   
         }
 
             if(jac_rows>-1)
@@ -202,9 +190,6 @@ void Pyramid::calculateHessianInv()
     float* temp_ptr0=temp.ptr<float>(0);
     float* temp_ptr1=temp.ptr<float>(1);
     float* temp_ptr2=temp.ptr<float>(2);
-    float* temp_ptr3=temp.ptr<float>(3);
-    float* temp_ptr4=temp.ptr<float>(4);
-    float* temp_ptr5=temp.ptr<float>(5);
     
     for(int y=0; y<prev_frame->no_nonZeroDepthPts; y++)
     {
@@ -212,9 +197,6 @@ void Pyramid::calculateHessianInv()
         temp_ptr0[y]=temp_ptr0[y]*weight_ptr[y];
         temp_ptr1[y]=temp_ptr1[y]*weight_ptr[y];
         temp_ptr2[y]=temp_ptr2[y]*weight_ptr[y];
-        temp_ptr3[y]=temp_ptr3[y]*weight_ptr[y];
-        temp_ptr4[y]=temp_ptr4[y]*weight_ptr[y];
-        temp_ptr5[y]=temp_ptr5[y]*weight_ptr[y];
         
         if(isnan(float(weight_ptr[y] )))
         {
@@ -222,7 +204,7 @@ void Pyramid::calculateHessianInv()
         }
         
     }
-    Mat hessian = Mat::zeros(6, 6, CV_32FC1);
+    Mat hessian = Mat::zeros(3, 3, CV_32FC1);
     Mat new_temp=temp.t();
     
     float* new_temp_ptr=new_temp.ptr<float>(0);
@@ -233,8 +215,8 @@ void Pyramid::calculateHessianInv()
     {
         new_temp_ptr = new_temp.ptr<float>(y);
         steep_ptr=steepestDescent.ptr<float>(y);
-        Mat temp_T= (Mat_<float>(6,1)<<new_temp_ptr[0], new_temp_ptr[1],new_temp_ptr[2], new_temp_ptr[3], new_temp_ptr[4], new_temp_ptr[5] );
-        Mat steep_T=(Mat_<float>(1,6)<<steep_ptr[0], steep_ptr[1], steep_ptr[2], steep_ptr[3], steep_ptr[4], steep_ptr[5]);
+        Mat temp_T= (Mat_<float>(3,1)<<new_temp_ptr[0], new_temp_ptr[1],new_temp_ptr[2] );
+        Mat steep_T=(Mat_<float>(1,3)<<steep_ptr[0], steep_ptr[1], steep_ptr[2]);
         hessian+= ((temp_T*steep_T));//+ covarianceMatrixInv);
        // hessian+=covarianceMatrixInv;
     }
@@ -324,17 +306,14 @@ void Pyramid::calculateWarpedPoints ()
     
     int nonZeroPts=prev_frame->no_nonZeroDepthPts;
     
-    //Create matrix in OpenCV
-    Mat se3=(Mat_<float>(4, 4) << 0,-pose[2],pose[1],pose[3], pose[2],0,-pose[0],pose[4], -pose[1],pose[0],0,pose[5],0,0,0,0);
+    float c = cos(pose[2]);
+    float s = sin(pose[2]);
+    float r1 = pose[0];
+    float r2 = pose[1];
+
+    Mat SE3 = (Mat_<float>(4, 4) << c,0,-s,-(r1*s),0,1,0,0,s,0,c,((r1*c)-r2),0,0,0,1);
     
-    // Map the OpenCV matrix with Eigen:
-    Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> se3_Eigen(se3.ptr<float>(), se3.rows, se3.cols);
-    
-    // Take exp in Eigen and store in new Eigen matrix
-    Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> SE3_Eigen = se3_Eigen.exp();
-    
-    // create an OpenCV Mat header for the Eigen data:
-    Mat SE3(4, 4, CV_32FC1, SE3_Eigen.data()); //SE3 pose of current w.r.t prev image
+    Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> SE3_Eigen(SE3.ptr<float>(), SE3.rows, SE3.cols);
     
     //*******INITIALIZE POINTERS*******//
     
@@ -429,7 +408,7 @@ void Pyramid::calculateWarpedPoints ()
                 
                 printf("\nSE3_vec: %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f", SE3_vec[0],  SE3_vec[1],  SE3_vec[2],  SE3_vec[3],  SE3_vec[4],  SE3_vec[5],  SE3_vec[6],  SE3_vec[7],  SE3_vec[8],  SE3_vec[9],  SE3_vec[10],  SE3_vec[11]);
                 
-                printf("\npose: %f, %f, %f, %f, %f, %f", pose[0],pose[1], pose[2], pose[3], pose[4], pose[5] );
+                printf("\npose: %f, %f, %f", pose[0],pose[1], pose[2]);
                 
                 cout<<"\nterm1: "<<SE3_vec[8]*worldpoint_ptrX[j];
                 cout<<"\nterm2: "<<SE3_vec[9]*worldpoint_ptrY[j];
@@ -438,8 +417,7 @@ void Pyramid::calculateWarpedPoints ()
                 
                 printf("\nstopping...");
                 
-            }
-                
+            }              
             
         }
         
@@ -608,7 +586,6 @@ void Pyramid::updatePose()
     
     //cout<<"\nWeighted delta Pose "<<abs(deltapose_ptr[0]*util::weight[0])<<" , "<<abs(deltapose_ptr[1]*util::weight[1])<<" , "<<abs(deltapose_ptr[2]*util::weight[2])<<" , "<<abs(deltapose_ptr[3]*util::weight[3])<<" , "<<abs(deltapose_ptr[4]*util::weight[4])<<" , "<<abs(deltapose_ptr[5]*util::weight[5])<<" , ";
     
-    
     //calculate weighted pose value
     float weighted_pose = abs(deltapose_ptr[0]*util::weight[0])+abs(deltapose_ptr[1]*util::weight[1])+abs(deltapose_ptr[2]*util::weight[2])+abs(deltapose_ptr[3]*util::weight[3])+abs(deltapose_ptr[4]*util::weight[4])+abs(deltapose_ptr[5]*util::weight[5]);
     
@@ -670,13 +647,14 @@ float Pyramid::calResidualAndWeights()
     
     int idx=0;
    
-    Mat se3=(Mat_<float>(4, 4) << 0,-pose[2],pose[1],pose[3], pose[2],0,-pose[0],pose[4], -pose[1],pose[0],0,pose[5],0,0,0,0);
+    float c = cos(pose[2]);
+    float s = sin(pose[2]);
+    float r1 = pose[0];
+    float r2 = pose[1];
+
+    Mat SE3 = (Mat_<float>(4, 4) << c,0,-s,-(r1*s),0,1,0,0,s,0,c,((r1*c)-r2),0,0,0,1);
     
-    // Map the OpenCV matrix with Eigen:
-    Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> se3_Eigen(se3.ptr<float>(), se3.rows, se3.cols);
-    
-    // Take exp in Eigen and store in new Eigen matrix
-    Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> SE3_Eigen = se3_Eigen.exp();
+    Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> SE3_Eigen(SE3.ptr<float>(), SE3.rows, SE3.cols);
     
     float tx=SE3_Eigen(0,3);
     float ty=SE3_Eigen(1,3);
@@ -808,19 +786,16 @@ void Pyramid::putPreviousPose(frame* tminus1_prev_frame)
     prevPose[0]=tminus1_prev_frame->poseWrtOrigin[0];
     prevPose[1]=tminus1_prev_frame->poseWrtOrigin[1];
     prevPose[2]=tminus1_prev_frame->poseWrtOrigin[2];
-    prevPose[3]=tminus1_prev_frame->poseWrtOrigin[3];
-    prevPose[4]=tminus1_prev_frame->poseWrtOrigin[4];
-    prevPose[5]=tminus1_prev_frame->poseWrtOrigin[5];
 
 }
 
 //part of motion prior, not used
 void Pyramid::calCovarianceMatrixInv(float* covar_wts)
 {
-    Mat covarianceMatrix=Mat::zeros(6, 6, CV_32FC1);
+    Mat covarianceMatrix=Mat::zeros(3, 3, CV_32FC1);
     
     float* covarmat_ptr=covarianceMatrix.ptr<float>(0);
-    for(int y=0;y<6;y++)
+    for(int y=0;y<3;y++)
     {
         covarmat_ptr=covarianceMatrix.ptr<float>(y);
         covarmat_ptr[y]=covar_wts[y];
@@ -833,15 +808,15 @@ void Pyramid::calCovarianceMatrixInv(float* covar_wts)
 void Pyramid::calMotionPrior()
 {
     //printf("\nIn motion prior");
-    Mat diffPose=Mat::zeros(1, 6, CV_32FC1);
+    Mat diffPose=Mat::zeros(1, 3, CV_32FC1);
     float* diffpose_ptr=diffPose.ptr<float>(0);
     
-    for(int i=0;i<6; i++)
+    for(int i=0;i<3; i++)
     {
         diffpose_ptr[i]=prevPose[i]-pose[i];
         //printf("\nprev: %f, current: %f, diff: %f", prevPose[i], pose[i], diffpose_ptr[i]);
     }
-    motionPrior=Mat::zeros(1, 6, CV_32FC1);
+    motionPrior=Mat::zeros(1, 3, CV_32FC1);
     
     for(int i=0;i<prev_frame->no_nonZeroDepthPts; i++)
         motionPrior+=(covarianceMatrixInv*(diffPose.t())).t(); //1x6

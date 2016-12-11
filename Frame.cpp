@@ -643,11 +643,11 @@ void frame::concatenateRelativePose(float *src_1wrt2, float *src_2wrt3, float *d
 
     Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> diff = dest_1wrt3_SE3Eigen2 - dest_1wrt3_SE3Eigen;
     float e = diff.norm();
-    float d = dest_1wrt2_SE3Eigen2.norm()
+    float d = dest_1wrt3_SE3Eigen2.norm();
 
 
     if(e>0){
-        printf("CONCATENATE REL ERROR: %f%%\n",(e/D)*100);
+        printf("CONCATENATE REL ERROR: %f%%\n",(e/d)*100);
     }
 
 }
@@ -690,7 +690,7 @@ void frame::concatenateOriginPose(float *src_1wrt0, float *src_2wrt0, float *des
 
     Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> diff = dest_1wrt2_SE3Eigen2 - dest_1wrt2_SE3Eigen;
     float e = diff.norm();
-    float d = dest_1wrt2_SE3Eigen2.norm()
+    float d = dest_1wrt2_SE3Eigen2.norm();
 
     if(e>0){
         printf("CONCATENATE ORIGIN ERROR: %f%%\n",(e/d)*100);
@@ -728,7 +728,7 @@ void frame::calculateInvLiePose(float *pose)
     
     Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> diff = SE3_Eigen_inv2 - SE3_Eigen_inv;
     float e = diff.norm();
-    float d = SE3_Eigen_inv2.norm()
+    float d = SE3_Eigen_inv2.norm();
 
     if(e>0){
         printf("INVERSE ERROR: %f%%\n",(e/d)*100);
@@ -765,7 +765,7 @@ void frame::calculateInvLiePose(float *posesrc, float *posedest)
     
     Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> diff = SE3_Eigen_inv2 - SE3_Eigen_inv;
     float e = diff.norm();
-    float d = SE3_Eigen_inv2.norm()
+    float d = SE3_Eigen_inv2.norm();
 
     if(e>0){
         printf("INVERSE ERROR: %f%%\n",(e/d)*100);

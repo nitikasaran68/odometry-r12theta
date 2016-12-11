@@ -37,8 +37,8 @@ PixelWisePyramid::PixelWisePyramid(frame* prevframe,frame* currentframe,float* p
     //here matrices are of size rows*cols, where zero depth points are included but are masked
     savedWarpedPointsX=Mat::zeros(nRows, nCols, CV_32FC1);
     savedWarpedPointsY=Mat::zeros(nRows, nCols, CV_32FC1);
-    steepestDescent=Mat::zeros(6, nRows*nCols, CV_32FC1); //6xN
-    weightedSteepestDescent=Mat::zeros(6, nRows*nCols, CV_32FC1); //6*N
+    steepestDescent=Mat::zeros(3, nRows*nCols, CV_32FC1); //6xN
+    weightedSteepestDescent=Mat::zeros(3, nRows*nCols, CV_32FC1); //6*N
     
     //motion prior, not used
     //complete implementation may not be present
@@ -90,10 +90,10 @@ void PixelWisePyramid::putPreviousPose(frame* tminus1_prev_frame)
 //motion prior, not used
 void PixelWisePyramid::calCovarianceMatrixInv(float* covar_wts)
 {
-    Mat covarianceMatrix=Mat::zeros(6, 6, CV_32FC1);
+    Mat covarianceMatrix=Mat::zeros(3, 3, CV_32FC1);
     
     float* covarmat_ptr=covarianceMatrix.ptr<float>(0);
-    for(int y=0;y<6;y++)
+    for(int y=0;y<3;y++)
     {
         covarmat_ptr=covarianceMatrix.ptr<float>(y);
         covarmat_ptr[y]=covar_wts[y];
@@ -108,15 +108,15 @@ void PixelWisePyramid::calCovarianceMatrixInv(float* covar_wts)
 void PixelWisePyramid::calMotionPrior()
 {
     //printf("\nIn motion prior");
-    Mat diffPose=Mat::zeros(1, 6, CV_32FC1);
+    Mat diffPose=Mat::zeros(1, 3, CV_32FC1);
     float* diffpose_ptr=diffPose.ptr<float>(0);
     
-    for(int i=0;i<6; i++)
+    for(int i=0;i<3; i++)
     {
         diffpose_ptr[i]=prevPose[i]-pose[i];
         //printf("\nprev: %f, current: %f, diff: %f", prevPose[i], pose[i], diffpose_ptr[i]);
     }
-    motionPrior=Mat::zeros(1, 6, CV_32FC1);
+    motionPrior=Mat::zeros(1, 3, CV_32FC1);
     
     for(int i=0;i<prev_frame->no_nonZeroDepthPts; i++)
         motionPrior+=(covarianceMatrixInv*(diffPose.t())).t(); //1x6
@@ -168,10 +168,10 @@ void PixelWisePyramid::calculatePixelWise(int ymin,int ymax, int thread_num)
     float gradx;
     float grady;
     
-    float jacob_bottom[6];
-    float jacob_top[6];
+    float jacob_bottom[3];
+    float jacob_top[3];
     
-    Mat steepestDescentMat(1,6,CV_32FC1);
+    Mat steepestDescentMat(1,3,CV_32FC1);
     Mat weigthed_steepdesc_T;
     
     float residual;
@@ -181,20 +181,20 @@ void PixelWisePyramid::calculatePixelWise(int ymin,int ymax, int thread_num)
     switch (thread_num)
     {
         case 0: //single thread, therefore uses the final variable
-            sd_param=Mat::zeros(1, 6, CV_32FC1);
-            hessian=Mat::zeros(6, 6, CV_32FC1);
+            sd_param=Mat::zeros(1, 3, CV_32FC1);
+            hessian=Mat::zeros(3, 3, CV_32FC1);
             break;
         case 1: //uses variable associated with first thread
-            sd_param_thread1 =Mat::zeros(1, 6, CV_32FC1);
-            hessian_thread1=Mat::zeros(6, 6, CV_32FC1);
+            sd_param_thread1 =Mat::zeros(1, 3, CV_32FC1);
+            hessian_thread1=Mat::zeros(3, 3, CV_32FC1);
             break;
         case 2:
-            sd_param_thread2=Mat::zeros(1, 6, CV_32FC1);
-            hessian_thread2=Mat::zeros(6, 6, CV_32FC1);
+            sd_param_thread2=Mat::zeros(1, 3, CV_32FC1);
+            hessian_thread2=Mat::zeros(3, 3, CV_32FC1);
             break;
         case 3:
-            sd_param_thread3=Mat::zeros(1, 6, CV_32FC1);
-            hessian_thread3=Mat::zeros(6, 6, CV_32FC1);
+            sd_param_thread3=Mat::zeros(1, 3, CV_32FC1);
+            hessian_thread3=Mat::zeros(3, 3, CV_32FC1);
             break;
     }
     
@@ -226,16 +226,16 @@ void PixelWisePyramid::calculatePixelWise(int ymin,int ymax, int thread_num)
     float* saved_warpedpts_ptrY;
     
     //*******STORE SE3 PARAMETERS*******//
+
+
+    float c = cos(pose[2]);
+    float s = sin(pose[2]);
+    float r1 = pose[0];
+    float r2 = pose[1];
+
+    Mat SE3 = (Mat_<float>(4, 4) << c,0,-s,-(r1*s),0,1,0,0,s,0,c,((r1*c)-r2),0,0,0,1);
     
-    //using the lie algebra 6 vector pose and forming its equivalent SE3 4x4 pose matrix
-    //Create matrix in OpenCV
-    Mat se3=(Mat_<float>(4, 4) << 0,-pose[2],pose[1],pose[3], pose[2],0,-pose[0],pose[4], -pose[1],pose[0],0,pose[5],0,0,0,0);
-    // Map the OpenCV matrix with Eigen:
-    Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> se3_Eigen(se3.ptr<float>(), se3.rows, se3.cols);
-    // Take exp in Eigen and store in new Eigen matrix
-    Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> SE3_Eigen = se3_Eigen.exp();
-    // create an OpenCV Mat header for the Eigen data:
-    Mat SE3(4, 4, CV_32FC1, SE3_Eigen.data());
+    Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> SE3_Eigen(SE3.ptr<float>(), SE3.rows, SE3.cols);
     
     float* SE3_ptr;
     float SE3_vec[12];  //r11, r12, r13, t1, r21 r22, r23, t2, r31, r32, r33, t3
@@ -255,8 +255,6 @@ void PixelWisePyramid::calculatePixelWise(int ymin,int ymax, int thread_num)
     float tx=SE3_Eigen(0,3);
     float ty=SE3_Eigen(1,3);
     float tz=SE3_Eigen(2,3);
-    
-    
     
     //*******PIXEL WISE LOOP*******//
     
@@ -379,33 +377,21 @@ void PixelWisePyramid::calculatePixelWise(int ymin,int ymax, int thread_num)
             
             //calculating Jacobian
             //precomputed expression of jacobian*gradient
-            jacob_bottom[0]  = grady*(-(resized_fy + (pow((-resized_cy + y),2) / resized_fy)));
-            jacob_top[0] = gradx*(-((-resized_cy + y)*(-resized_cx + x)) / resized_fy);
+            jacob_bottom[0]  = grady*((resized_cy - y) * pow(depth_ptr[x],-1));
+            jacob_top[0] = gradx*((resized_cx - x) * pow(depth_ptr[x],-1));
+
+            jacob_bottom[1]  = grady*(-(resized_cy - y) * pow(depth_ptr[x],-1));
+            jacob_top[1] = gradx*(-(resized_cx - x) * pow(depth_ptr[x],-1));
             
-            jacob_bottom[1]=grady*(((-resized_cy + y)*(-resized_cx + x)) / resized_fx);
-            jacob_top[1]= gradx*(resized_fx + (pow((-resized_cx + x),2) / resized_fx));
-            
-            jacob_bottom[2]=grady*((resized_fy*(-resized_cx + x)) / resized_fx);
-            jacob_top[2]= gradx*(-(resized_fx*(-resized_cy + y) / resized_fy));
-            
-            jacob_bottom[3]=0;
-            jacob_top[3]=gradx*( resized_fx*(pow(depth_ptr[x],-1)));
-            
-            jacob_bottom[4]= grady*(resized_fy*(pow(depth_ptr[x],-1)));
-            jacob_top[4]= 0;
-            
-            jacob_bottom[5]= grady*(-(-resized_cy + y) *(pow(depth_ptr[x],-1)));
-            jacob_top[5]= gradx*(-(-resized_cx + x) *(pow(depth_ptr[x],-1)));
+            jacob_bottom[2]=grady*(((-resized_cy + y)*(-resized_cx + x)) / resized_fx);
+            jacob_top[2]= gradx*(- resized_fx - (pow((-resized_cx + x),2) / resized_fx));
             
             //calculate steepest descent
             steepdesc_ptr[0]=jacob_top[0]+jacob_bottom[0]; //gradient already multiplied
             steepdesc_ptr[1]=jacob_top[1]+jacob_bottom[1];
             steepdesc_ptr[2]=jacob_top[2]+jacob_bottom[2];
-            steepdesc_ptr[3]=jacob_top[3]+jacob_bottom[3];
-            steepdesc_ptr[4]=jacob_top[4]+jacob_bottom[4];
-            steepdesc_ptr[5]=jacob_top[5]+jacob_bottom[5];
             
-            //cout<<"\nsteepest descent: \n "<<steepestDescentMat;
+            //cout<<"\nidhar steepest descent: \n "<<steepestDescentMat;
             
             //calculate residual
             if(warpedintensity==-1)
@@ -421,27 +407,28 @@ void PixelWisePyramid::calculatePixelWise(int ymin,int ymax, int thread_num)
                 res_weight=0;
             else
             {
-            //calculate weights
-            //these weights change with each iteration
-            //are dependent on gradient, residual and depth variance at taht point
-            float px = trfm_worldpointX;	// x'
-            float py = trfm_worldpointY;	// y'
-            float pz = trfm_worldpointZ;	// z'
-            float d = 1.0f/depth_ptr[x];	// d
-            float rp = residual; // r_p
-            float gx = resized_fx * gradx;	// \delta_x I
-            float gy = resized_fy * grady;  // \delta_y I
-            float s = 1.0f * (*(currentDepthMap->depthvararrptr[prev_frame->pyrLevel]+idx));	// \sigma_d^2
-            // calc dw/dd (first 2 components):
-            float g0 = (tx * pz - tz * px) / (pz*pz*d);
-            float g1 = (ty * pz - tz * py) / (pz*pz*d);
-            // calc w_p
-            float drpdd = gx * g0 + gy * g1;	// ommitting the minus
-            float w_p = 1.0f / (util::CAMERA_PIXEL_NOISE_2 + s * drpdd * drpdd);
-            float weighted_rp = fabs(rp*sqrtf(w_p));
-            float wh = fabs(weighted_rp < (util::HUBER_D/2) ? 1 : (util::HUBER_D/2) / weighted_rp);
-            //sumRes += wh * w_p * rp*rp;
-            res_weight= wh * w_p; //final weight
+                //calculate weights
+                //these weights change with each iteration
+                //are dependent on gradient, residual and depth variance at taht point
+                float px = trfm_worldpointX;	// x'
+                float py = trfm_worldpointY;	// y'
+                float pz = trfm_worldpointZ;	// z'
+                float d = 1.0f/depth_ptr[x];	// d
+                float rp = residual; // r_p
+                float gx = resized_fx * gradx;	// \delta_x I
+                float gy = resized_fy * grady;  // \delta_y I
+                float s = 1.0f * (*(currentDepthMap->depthvararrptr[prev_frame->pyrLevel]+idx));	// \sigma_d^2
+                // calc dw/dd (first 2 components):
+                float g0 = (tx * pz - tz * px) / (pz*pz*d);
+                float g1 = (ty * pz - tz * py) / (pz*pz*d);
+                // calc w_p
+                float drpdd = gx * g0 + gy * g1;	// ommitting the minus
+                float w_p = 1.0f / (util::CAMERA_PIXEL_NOISE_2 + s * drpdd * drpdd);
+                float weighted_rp = fabs(rp*sqrtf(w_p));
+                float wh = fabs(weighted_rp < (util::HUBER_D/2) ? 1 : (util::HUBER_D/2) / weighted_rp);
+                //sumRes += wh * w_p * rp*rp;
+                res_weight= wh * w_p; //final weight
+                //printf("\nweight: %f\n",res_weight );
             }
             
             disp_weight_ptr[x]=res_weight;
@@ -453,19 +440,24 @@ void PixelWisePyramid::calculatePixelWise(int ymin,int ymax, int thread_num)
             cout<<"\n\n"<<steepestDescentMat<<"\n";*/
             
             //calculate weighted steepest descent
-            weigthed_steepdesc_T= steepestDescentMat.t(); //6X1
+            weigthed_steepdesc_T= steepestDescentMat.t(); //3X1
             weigthed_steepdesc_T=weigthed_steepdesc_T.mul(res_weight);
             
             //cout<<"\nweighted steepest descent: \n"<<weigthed_steepdesc_T;
             
             //stores the final variables here which are needed after this for estimation of pose change
             //steepest descent and hessian are summed over all the pixel
+            ofstream f1,f2,f3;
+
             switch (thread_num)
             {
                 case 0:
                     hessian+=(weigthed_steepdesc_T*steepestDescentMat); //6X6
                     sd_param+=steepestDescentMat.mul(residual*res_weight); //steepest descent parameters, 1x6
                     
+                    cout << "sd_param: " << sd_param << endl;
+                    cout << "hessian: " << hessian << endl;
+
                     if(util::FLAG_USE_MOTION_PRIOR) //motion prior, not used
                         hessian+=covarianceMatrixInv;
                     
@@ -473,6 +465,11 @@ void PixelWisePyramid::calculatePixelWise(int ymin,int ymax, int thread_num)
                 case 1:
                     hessian_thread1+=(weigthed_steepdesc_T*steepestDescentMat);
                     sd_param_thread1+=steepestDescentMat.mul(residual*res_weight);
+
+                    f1.open("sd_param1");
+                    f1 << "sd_param1: " << sd_param_thread1 << endl;
+                    f1 << "hessian: " << hessian_thread1 << endl;
+                    f1.close();
                     
                     if(util::FLAG_USE_MOTION_PRIOR)
                         hessian_thread1+=covarianceMatrixInv;
@@ -481,6 +478,11 @@ void PixelWisePyramid::calculatePixelWise(int ymin,int ymax, int thread_num)
                 case 2:
                     hessian_thread2+=(weigthed_steepdesc_T*steepestDescentMat);
                     sd_param_thread2+=steepestDescentMat.mul(residual*res_weight);
+
+                    f2.open("sd_param2");
+                    f2 << "sd_param2: " << sd_param_thread2 << endl;
+                    f2 << "hessian: " << hessian_thread2 << endl;
+                    f2.close();
                     
                     if(util::FLAG_USE_MOTION_PRIOR)
                         hessian_thread2+=covarianceMatrixInv;
@@ -489,6 +491,11 @@ void PixelWisePyramid::calculatePixelWise(int ymin,int ymax, int thread_num)
                 case 3:
                     hessian_thread3+=(weigthed_steepdesc_T*steepestDescentMat);
                     sd_param_thread3+=steepestDescentMat.mul(residual*res_weight);
+
+                    f3.open("sd_param3");
+                    f3 << "sd_param3: " << sd_param_thread3 << endl;
+                    f3 << "hessian: " << hessian_thread3 << endl;
+                    f3.close();
                     
                     if(util::FLAG_USE_MOTION_PRIOR)
                         hessian_thread3+=covarianceMatrixInv;
@@ -527,32 +534,52 @@ void PixelWisePyramid::calculatePixelWiseParallel()
     if(util::FLAG_DO_PARALLEL_POSE_ESTIMATION) //if flag on to prallelize pose estimation
     {
     
-    boost::thread_group t_group;
+        boost::thread_group t_group;
     
         int y_increment=nRows/util::NUM_POSE_THREADS; //defines the section size in an image that is given to each thread
         
         //printf("\n\n\nPose: pyrlevel: %d, nRows: %d, nCols: %d, y_increment: %d", pyrlevel, nRows, nCols, y_increment);
     
-    //forms only 3 threads (hard-coded)
-    //if more threads are to be added, need to be called and thread variables also have to be created in the class
-    t_group.create_thread(boost::bind(&PixelWisePyramid::calculatePixelWise,this, 0,y_increment,1));
-    t_group.create_thread(boost::bind(&PixelWisePyramid::calculatePixelWise,this, y_increment,2*y_increment,2));
-    t_group.create_thread(boost::bind(&PixelWisePyramid::calculatePixelWise,this, 2*y_increment,nRows,3));
+        //forms only 3 threads (hard-coded)
+        //if more threads are to be added, need to be called and thread variables also have to be created in the class
+        t_group.create_thread(boost::bind(&PixelWisePyramid::calculatePixelWise,this, 0,y_increment,1));
+        t_group.create_thread(boost::bind(&PixelWisePyramid::calculatePixelWise,this, y_increment,2*y_increment,2));
+        t_group.create_thread(boost::bind(&PixelWisePyramid::calculatePixelWise,this, 2*y_increment,nRows,3));
+            
+        t_group.join_all();
+           
+        //control reaches here when all threads have been completed and joined
+        //forms the final hessian and sd_param matrices by summing each thread matrix
+        //effectively sums over all the pixels
+        cout << "hessian1:\n" ;
+        cout << hessian_thread1 << endl;
+        cout << "hessian2:\n" ;
+        cout << hessian_thread2 << endl;
+        cout << "hessian3:\n" ;
+        cout << hessian_thread3 << endl;
+
+        cout << "sd1:\n" ;
+        cout << sd_param_thread1 << endl;
+        cout << "sd2:\n" ;
+        cout << sd_param_thread2 << endl;
+        cout << "sd3:\n" ;
+        cout << sd_param_thread3 << endl;
+
+        hessian = hessian_thread1 + hessian_thread2 + hessian_thread3;
+        sd_param = sd_param_thread1 + sd_param_thread2 + sd_param_thread3;
+
+        cout << "hessian:\n";
+        cout << hessian << endl;
         
-    t_group.join_all();
-       
-    //control reaches here when all threads have been completed and joined
-    //forms the final hessian and sd_param matrices by summing each thread matrix
-    //effectively sums over all the pixels
-        hessian=hessian_thread1+hessian_thread2+hessian_thread3;
-        sd_param=sd_param_thread1+sd_param_thread2+sd_param_thread3;
-        
+        cout << "sd:\n";
+        cout << sd_param << endl;
     }
     else
     {
         calculatePixelWise(0, nRows, 0); //when only single thread, function called over the entire iamge at once
     }
 
+    cout << "det: " << determinant(hessian) << endl;
     //calculate hessian inverse
     hessianInv=hessian.inv();
     
@@ -568,9 +595,35 @@ void PixelWisePyramid::calculatePixelWiseParallel()
 void PixelWisePyramid::updatePose()
 {
     //printf("\nUpdating pose ");
+        
+    //Mat temp = residual.mul(weights);    // 1 x N
+
+    float *ptr;
+    int i,j;
+
+    // cout << "Weighted residuals:\n";
+    // ptr = temp.ptr<float>(0);
+    // for (j = 0; j < prev_frame->no_nonZeroDepthPts; ++j)
+    // {
+    //     cout << ptr[j] << " ";
+    // }
+    // cout << "\n";
+
+    cout << "steepest Descent:\n" << sd_param << endl;
     
-    //printf("\n\nBefore update: %f , %f , %f , %f , %f , %f", pose[0],pose[1],pose[2],pose[3],pose[4],pose[5]);
-    
+    cout << "hessianInv:\n" << hessianInv << endl;
+
+    // for (i = 0; i < 3; ++i)
+    // {
+    //     ptr = hessianInv.ptr<float>(i);
+    //     for (j = 0; j < 3; ++j)
+    //     {
+    //         cout << ptr[j] << " ";
+    //     }
+    //     cout << "\n";
+    // }
+
+
     Mat deltapose1= ((hessianInv*(sd_param.t())).t()); //calculate delta pose (change in pose)
     deltapose1=-deltapose1; //negating here as residual=(warpedImage-previmage), if residual=(previmage-warpedImage) then no minus sign needed
 
@@ -614,13 +667,13 @@ void PixelWisePyramid::updatePose()
      }
      */
     
-    //printf("\nDelta Pose: %f , %f , %f , %f , %f , %f", deltapose_ptr[0],deltapose_ptr[1],deltapose_ptr[2],deltapose_ptr[3],deltapose_ptr[4],deltapose_ptr[5]);
+    printf("\nDelta Pose: %f , %f , %f", deltapose_ptr[0],deltapose_ptr[1],deltapose_ptr[2]);
     
     //cout<<"\nWeighted delta Pose "<<abs(deltapose_ptr[0]*util::weight[0])<<" , "<<abs(deltapose_ptr[1]*util::weight[1])<<" , "<<abs(deltapose_ptr[2]*util::weight[2])<<" , "<<abs(deltapose_ptr[3]*util::weight[3])<<" , "<<abs(deltapose_ptr[4]*util::weight[4])<<" , "<<abs(deltapose_ptr[5]*util::weight[5])<<" , ";
     
     
     //calculate weighted pose value to check termination condition 
-    float weighted_pose = abs(deltapose_ptr[0]*util::weight[0])+abs(deltapose_ptr[1]*util::weight[1])+abs(deltapose_ptr[2]*util::weight[2])+abs(deltapose_ptr[3]*util::weight[3])+abs(deltapose_ptr[4]*util::weight[4])+abs(deltapose_ptr[5]*util::weight[5]);
+    float weighted_pose = abs(deltapose_ptr[0]*util::weight[0])+abs(deltapose_ptr[1]*util::weight[1])+abs(deltapose_ptr[2]*util::weight[2]);
     
     //printf("\n\nTotal Weighted Pose: %f \n\n ",weighted_pose);
     weightedPose=weighted_pose;
@@ -744,19 +797,13 @@ void PixelWisePyramid::precomputePixelWiseInvCompositional(int ymin, int ymax, i
     float* steepdesc_ptr0=steepestDescent.ptr<float>(0);
     float* steepdesc_ptr1=steepestDescent.ptr<float>(1);
     float* steepdesc_ptr2=steepestDescent.ptr<float>(2);
-    float* steepdesc_ptr3=steepestDescent.ptr<float>(3);
-    float* steepdesc_ptr4=steepestDescent.ptr<float>(4);
-    float* steepdesc_ptr5=steepestDescent.ptr<float>(5);
     
     float* weighted_steepdesc_ptr0=weightedSteepestDescent.ptr<float>(0);
     float* weighted_steepdesc_ptr1=weightedSteepestDescent.ptr<float>(1);
     float* weighted_steepdesc_ptr2=weightedSteepestDescent.ptr<float>(2);
-    float* weighted_steepdesc_ptr3=weightedSteepestDescent.ptr<float>(3);
-    float* weighted_steepdesc_ptr4=weightedSteepestDescent.ptr<float>(4);
-    float* weighted_steepdesc_ptr5=weightedSteepestDescent.ptr<float>(5);
     
-    float jacob_bottom[6];
-    float jacob_top[6];
+    float jacob_bottom[3];
+    float jacob_top[3];
    
     
     for(int y=ymin;y<ymax;y++)
@@ -777,16 +824,10 @@ void PixelWisePyramid::precomputePixelWiseInvCompositional(int ymin, int ymax, i
                 steepdesc_ptr0[idx]=0;
                 steepdesc_ptr1[idx]=0;
                 steepdesc_ptr2[idx]=0;
-                steepdesc_ptr3[idx]=0;
-                steepdesc_ptr4[idx]=0;
-                steepdesc_ptr5[idx]=0;
                 
                 weighted_steepdesc_ptr0[idx]=0;
                 weighted_steepdesc_ptr1[idx]=0;
                 weighted_steepdesc_ptr2[idx]=0;
-                weighted_steepdesc_ptr3[idx]=0;
-                weighted_steepdesc_ptr4[idx]=0;
-                weighted_steepdesc_ptr5[idx]=0;
 
             
                 continue;
@@ -797,42 +838,24 @@ void PixelWisePyramid::precomputePixelWiseInvCompositional(int ymin, int ymax, i
             float grady=grady_ptr[x];
             
             //calculating Jacobian
-            jacob_bottom[0]  = grady*(-(resized_fy + (pow((-resized_cy + y),2) / resized_fy)));
-            jacob_top[0] = gradx*(-((-resized_cy + y)*(-resized_cx + x)) / resized_fy);
+            jacob_bottom[0]  = grady*((resized_cy - y) * pow(depth_ptr[x],-1));
+            jacob_top[0] = gradx*((resized_cx - x) * pow(depth_ptr[x],-1));
+
+            jacob_bottom[1]  = grady*(-(resized_cy - y) * pow(depth_ptr[x],-1));
+            jacob_top[1] = gradx*(-(resized_cx - x) * pow(depth_ptr[x],-1));
             
-            jacob_bottom[1]=grady*(((-resized_cy + y)*(-resized_cx + x)) / resized_fx);
-            jacob_top[1]= gradx*(resized_fx + (pow((-resized_cx + x),2) / resized_fx));
-            
-            jacob_bottom[2]=grady*((resized_fy*(-resized_cx + x)) / resized_fx);
-            jacob_top[2]= gradx*(-(resized_fx*(-resized_cy + y) / resized_fy));
-            
-            jacob_bottom[3]=0;
-            jacob_top[3]=gradx*( resized_fx*(pow(depth_ptr[x],-1)));
-            
-            jacob_bottom[4]= grady*(resized_fy*(pow(depth_ptr[x],-1)));
-            jacob_top[4]= 0;
-            
-            jacob_bottom[5]= grady*(-(-resized_cy + y) *(pow(depth_ptr[x],-1)));
-            jacob_top[5]= gradx*(-(-resized_cx + x) *(pow(depth_ptr[x],-1)));
+            jacob_bottom[2]=grady*(((-resized_cy + y)*(-resized_cx + x)) / resized_fx);
+            jacob_top[2]= gradx*(- resized_fx - (pow((-resized_cx + x),2) / resized_fx));
             
             //calculate steepest descent
             //in case of multi-threads, each thread will populate this matrix at a particular pixel, therefore no conflict of memory access
             steepdesc_ptr0[idx]=jacob_top[0]+jacob_bottom[0];
             steepdesc_ptr1[idx]=jacob_top[1]+jacob_bottom[1];
             steepdesc_ptr2[idx]=jacob_top[2]+jacob_bottom[2];
-            steepdesc_ptr3[idx]=jacob_top[3]+jacob_bottom[3];
-            steepdesc_ptr4[idx]=jacob_top[4]+jacob_bottom[4];
-            steepdesc_ptr5[idx]=jacob_top[5]+jacob_bottom[5];
             
             weighted_steepdesc_ptr0[idx]=steepdesc_ptr0[idx]*weight_ptr[x]; ///using the fixed weights in weight pyramid mat here
             weighted_steepdesc_ptr1[idx]=steepdesc_ptr1[idx]*weight_ptr[x];
             weighted_steepdesc_ptr2[idx]=steepdesc_ptr2[idx]*weight_ptr[x];
-            weighted_steepdesc_ptr3[idx]=steepdesc_ptr3[idx]*weight_ptr[x];
-            weighted_steepdesc_ptr4[idx]=steepdesc_ptr4[idx]*weight_ptr[x];
-            weighted_steepdesc_ptr5[idx]=steepdesc_ptr5[idx]*weight_ptr[x];
-            
-            
-            
 
         }
     }
@@ -886,16 +909,16 @@ void PixelWisePyramid::iteratePixelWiseInvCompositional(int ymin,int ymax, int t
     switch (thread_num)
     {
         case 0:
-            sd_param=Mat::zeros(1, 6, CV_32FC1);
+            sd_param=Mat::zeros(1, 3, CV_32FC1);
             break;
         case 1:
-            sd_param_thread1 =Mat::zeros(1, 6, CV_32FC1);
+            sd_param_thread1 =Mat::zeros(1, 3, CV_32FC1);
             break;
         case 2:
-            sd_param_thread2=Mat::zeros(1, 6, CV_32FC1);
+            sd_param_thread2=Mat::zeros(1, 3, CV_32FC1);
             break;
         case 3:
-            sd_param_thread3=Mat::zeros(1, 6, CV_32FC1);
+            sd_param_thread3=Mat::zeros(1, 3, CV_32FC1);
             break;
     }
     
@@ -913,9 +936,6 @@ void PixelWisePyramid::iteratePixelWiseInvCompositional(int ymin,int ymax, int t
     float* steepdesc_ptr0=steepestDescent.ptr<float>(0);
     float* steepdesc_ptr1=steepestDescent.ptr<float>(1);
     float* steepdesc_ptr2=steepestDescent.ptr<float>(2);
-    float* steepdesc_ptr3=steepestDescent.ptr<float>(3);
-    float* steepdesc_ptr4=steepestDescent.ptr<float>(4);
-    float* steepdesc_ptr5=steepestDescent.ptr<float>(5);
 
     //*******DISPLAY POINTERS*******//
     uchar* disp_templateimg_ptr;
@@ -927,14 +947,14 @@ void PixelWisePyramid::iteratePixelWiseInvCompositional(int ymin,int ymax, int t
     
     //*******STORE SE3 PARAMETERS*******//
     
-    //Create matrix in OpenCV
-    Mat se3=(Mat_<float>(4, 4) << 0,-pose[2],pose[1],pose[3], pose[2],0,-pose[0],pose[4], -pose[1],pose[0],0,pose[5],0,0,0,0);
-    // Map the OpenCV matrix with Eigen:
-    Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> se3_Eigen(se3.ptr<float>(), se3.rows, se3.cols);
-    // Take exp in Eigen and store in new Eigen matrix
-    Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> SE3_Eigen = se3_Eigen.exp();
-    // create an OpenCV Mat header for the Eigen data:
-    Mat SE3(4, 4, CV_32FC1, SE3_Eigen.data());
+    float c = cos(pose[2]);
+    float s = sin(pose[2]);
+    float r1 = pose[0];
+    float r2 = pose[1];
+
+    Mat SE3 = (Mat_<float>(4, 4) << c,0,-s,-(r1*s),0,1,0,0,s,0,c,((r1*c)-r2),0,0,0,1);
+    
+    Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> SE3_Eigen(SE3.ptr<float>(), SE3.rows, SE3.cols);
     
     float* SE3_ptr;
     float SE3_vec[12];  //r11, r12, r13, t1, r21 r22, r23, t2, r31, r32, r33, t3
@@ -1052,7 +1072,7 @@ void PixelWisePyramid::iteratePixelWiseInvCompositional(int ymin,int ymax, int t
             disp_weight_ptr[x]=weight_ptr[x]; //using fixed weight
             //printf("\nwt: %f, warped int: %f, residual: %f",disp_weight_ptr[x], warpedintensity, residual);
             
-            Mat steepestdescentMat=(Mat_<float>(1,6)<<steepdesc_ptr0[idx],steepdesc_ptr1[idx],steepdesc_ptr2[idx],steepdesc_ptr3[idx],steepdesc_ptr4[idx],steepdesc_ptr5[idx]);
+            Mat steepestdescentMat=(Mat_<float>(1,3)<<steepdesc_ptr0[idx],steepdesc_ptr1[idx],steepdesc_ptr2[idx]);
             //cout<<"\n"<<steepestdescentMat;
             
             
