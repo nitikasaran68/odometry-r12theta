@@ -56,11 +56,9 @@ void globalOptimize::calculateImageHistogram(frame *currentframe)
 
     currentLoopFrame.poseWrtWorld[0]=currentframe->poseWrtWorld[0];
     currentLoopFrame.poseWrtWorld[1]=currentframe->poseWrtWorld[1];
-    currentLoopFrame.poseWrtWorld[2]=currentframe->poseWrtWorld[2];
     
     currentLoopFrame.poseWrtOrigin[0]=currentframe->poseWrtOrigin[0];
     currentLoopFrame.poseWrtOrigin[1]=currentframe->poseWrtOrigin[1];
-    currentLoopFrame.poseWrtOrigin[2]=currentframe->poseWrtOrigin[2];
     
     currentLoopFrame.image=currentframe->image.clone();
     
@@ -229,11 +227,9 @@ void globalOptimize::pushToArray(frame *currentframe, depthMap* currentDepthMap)
     
     loopFrameArray[currentArrayId].poseWrtWorld[0]=currentframe->poseWrtWorld[0];
     loopFrameArray[currentArrayId].poseWrtWorld[1]=currentframe->poseWrtWorld[1];
-    loopFrameArray[currentArrayId].poseWrtWorld[2]=currentframe->poseWrtWorld[2];
     
     loopFrameArray[currentArrayId].poseWrtOrigin[0]=currentframe->poseWrtOrigin[0];
     loopFrameArray[currentArrayId].poseWrtOrigin[1]=currentframe->poseWrtOrigin[1];
-    loopFrameArray[currentArrayId].poseWrtOrigin[2]=currentframe->poseWrtOrigin[2];
     
     //updating keyframe to point to loopframe
     loopFrameArray[currentArrayId].this_currentDepthMap->keyFrame=loopFrameArray[currentArrayId].this_frame;
@@ -471,7 +467,7 @@ bool globalOptimize::findMatch(frame *currentframe, bool strayFlag)
 
 void globalOptimize::calculateRotationStats(float* pose1_0, float* pose2_0)
 {
-    rms_error = pow(pow(pose1_0[0]-pose2_0[0],2)+pow(pose1_0[1]-pose2_0[1],2)+pow(pose1_0[2]-pose2_0[2],2),0.5);
+    rms_error = pose1_0[1] - pose2_0[1];
 
     float view_vec1[3];
     float view_vec2[3];
@@ -479,24 +475,23 @@ void globalOptimize::calculateRotationStats(float* pose1_0, float* pose2_0)
     calculateViewVec(pose1_0, view_vec1);
     calculateViewVec(pose2_0, view_vec2);
 
-    float mag1=pow(view_vec1[0]*view_vec1[0]+view_vec1[1]*view_vec1[1]+view_vec1[2]*view_vec1[2],0.5);
-    float mag2=pow(view_vec2[0]*view_vec2[0]+view_vec2[1]*view_vec2[1]+view_vec2[2]*view_vec2[2],0.5);
+    float mag1=pow( view_vec1[0] * view_vec1[0]  +  view_vec1[1] * view_vec1[1]  +  view_vec1[2] * view_vec1[2] ,0.5);
+    float mag2=pow( view_vec2[0]*view_vec2[0] + view_vec2[1]*view_vec2[1] + view_vec2[2]*view_vec2[2] ,0.5);
     
-    relative_view_angle=acos((view_vec1[0]*view_vec2[0]+view_vec1[1]*view_vec2[1]+view_vec1[2]*view_vec2[2])/(mag1*mag2));
+    relative_view_angle = acos((view_vec1[0]*view_vec2[0] + view_vec1[1]*view_vec2[1] + view_vec1[2]*view_vec2[2]) / (mag1*mag2));
     //convert angle to degrees
-    relative_view_angle=(relative_view_angle*180)/3.14f;
+    relative_view_angle = (relative_view_angle * 180)/3.14f;
 
 }
 
 
 void globalOptimize::calculateViewVec(float* pose, float* view_vec)
 {
-    float c = cos(pose[2]);
-    float s = sin(pose[2]);
-    float r1 = pose[0];
-    float r2 = pose[1]; 
+    float c = cos(pose[1]);
+    float s = sin(pose[1]);
+    float r = pose[0];
     
-    Mat SE3=(Mat_<float>(4, 4) << c,0,-s,-(r1*s),0,1,0,0,s,0,c,((r1*c)-r2),0,0,0,1);
+    Mat SE3 = (Mat_<float>(4, 4) << c,0,-s,-(r*s),0,1,0,0,s,0,c,((r*c)-r),0,0,0,1);
 
     Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> SE3_Eigen(SE3.ptr<float>(), SE3.rows, SE3.cols);
     
@@ -630,13 +625,13 @@ void globalOptimize::findMatchParallel(frame *testFrame, int thread_num)
                     
                     //calculate pose with matched frame
                     
-                    float initial_pose[6];
+                    float initial_pose[2];
                     if(util::FLAG_INITIALIZE_NONZERO_POSE)
                     {
+                        // float r_init = pow(pow(util::ORIG_FX,2) + pow(util::ORIG_FY)),0.5)
+                        // initial_pose[0] = r_init;
                         initial_pose[0]=0.0f;
-                        initial_pose[1]=0.0f;
-                        initial_pose[2]=0.0f;
-                        
+                        initial_pose[1]=0.0f;                        
                     }
                     
                     
@@ -666,15 +661,12 @@ void globalOptimize::findMatchParallel(frame *testFrame, int thread_num)
                     //updating to original pose
                     
                     testFrame->poseWrtWorld[0]=currentLoopFrame.poseWrtWorld[0];
-                    testFrame->poseWrtWorld[1]=currentLoopFrame.poseWrtWorld[1];
-                    testFrame->poseWrtWorld[2]=currentLoopFrame.poseWrtWorld[2];
-                    
+                    testFrame->poseWrtWorld[1]=currentLoopFrame.poseWrtWorld[1];                    
                     
                     //updating to original pose
                     
                     testFrame->poseWrtOrigin[0]=currentLoopFrame.poseWrtOrigin[0];
                     testFrame->poseWrtOrigin[1]=currentLoopFrame.poseWrtOrigin[1];
-                    testFrame->poseWrtOrigin[2]=currentLoopFrame.poseWrtOrigin[2];
                     
                 }
                 
@@ -917,13 +909,13 @@ void globalOptimize::findConnection(frame *testFrame)
                 
                 //calculate pose with matched frame
                 printf("\nFinding pose with matched frame");
-                float initial_pose[6];
+                float initial_pose[3];
                 if(util::FLAG_INITIALIZE_NONZERO_POSE)
                 {
+                    // float r_init = pow(pow(util::ORIG_FX,2) + pow(util::ORIG_FY)),0.5)
+                    // keyFrame->initial_pose[0]=r_init;
                     initial_pose[0]=0.0f;
-                    initial_pose[1]=0.0f;
-                    initial_pose[2]=0.0f;
-                    
+                    initial_pose[1]=0.0f;                    
                 }
                 
                 //find pose of test frame with the matched frame

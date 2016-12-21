@@ -34,7 +34,7 @@ class frame
     
 public:
     
-    int frameid_new[3]; //not used
+    int frameid_new[2]; //not used
     
     
     //constructors
@@ -127,11 +127,11 @@ public:
     //depthhypothesis* pixels;
     
     //Pose matrices
-    float poseWrtOrigin[3]; //wrt KF
+    float poseWrtOrigin[2]; //wrt KF
     
-    float poseWrtWorld[3]; //w.r.t world, i.e first frame
+    float poseWrtWorld[2]; //w.r.t world, i.e first frame
     
-    float truePoseWrtWorld[3];
+    float truePoseWrtWorld[2];
     
     float rescaleFactor; //wrt KF
     

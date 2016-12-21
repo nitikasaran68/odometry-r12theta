@@ -28,12 +28,11 @@ using namespace cv;
 
 inline void calculateViewVecGnu(float *pose, float& rx, float& ry, float&  rz)
 {
-    float c = cos(pose[2]);
-    float s = sin(pose[2]);
-    float r1 = pose[0];
-    float r2 = pose[1];
+    float c = cos(pose[1]);
+    float s = sin(pose[1]);
+    float r = pose[0];
 
-    Mat SE3 = (Mat_<float>(4, 4) << c,0,-s,-(r1*s),0,1,0,0,s,0,c,((r1*c)-r2),0,0,0,1);
+    Mat SE3 = (Mat_<float>(4, 4) << c,0,-s,-(r*s),0,1,0,0,s,0,c,((r*c)-r),0,0,0,1);
 
     Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> SE3_Eigen(SE3.ptr<float>(), SE3.rows, SE3.cols);
     
@@ -50,12 +49,11 @@ inline void calculateViewVecGnu(float *pose, float& rx, float& ry, float&  rz)
 
 inline void calculateCoordinateGnu(float *pose, float& px, float& py, float&  pz)
 {
-    float c = cos(pose[2]);
-    float s = sin(pose[2]);
-    float r1 = pose[0];
-    float r2 = pose[1];
+    float c = cos(pose[1]);
+    float s = sin(pose[1]);
+    float r = pose[0];
 
-    Mat SE3 = (Mat_<float>(4, 4) << c,0,-s,-(r1*s),0,1,0,0,s,0,c,((r1*c)-r2),0,0,0,1);
+    Mat SE3 = (Mat_<float>(4, 4) << c,0,-s,-(r*s),0,1,0,0,s,0,c,((r*c)-r),0,0,0,1);
 
     Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> SE3_Eigen(SE3.ptr<float>(), SE3.rows, SE3.cols);
     

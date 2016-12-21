@@ -46,8 +46,8 @@ public:
     int nRows,nCols;
     float* pose;
     float weightedPose;
-    float prevPose[6];
-    float covarianceDiagonalWts[6];
+    float prevPose[2];
+    float covarianceDiagonalWts[2];
     
     Mat covarianceMatrixInv;
     Mat motionPrior;

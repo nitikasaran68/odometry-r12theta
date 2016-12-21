@@ -55,7 +55,7 @@ void depthMap::formDepthMap(frame* image_frame)
     
     if(image_frame->frameId == 1) //so that only calls for the first frame
     {
-        keyFrame=image_frame; //first frame is also the kf
+        keyFrame = image_frame; //first frame is also the kf
         keyFrame->isKeyframe=true;
         keyFrame->rescaleFactor=1.0f; //initially scale of kf is 1
         initializeRandomly(); //calls random initialization of depth map
@@ -2534,9 +2534,13 @@ void depthMap::createKeyFrame(frame* new_keyframe)
     keyFrame->poseWrtWorld[5]=keyFrame->poseWrtOrigin[0];
     */
     
+
+    // float r_init = pow(pow(util::ORIG_FX,2) + pow(util::ORIG_FY)),0.5)
+    // keyFrame->poseWrtOrigin[0]=r_init;
+    
     keyFrame->poseWrtOrigin[0]=0.0f; //making origin again for KeyFrame
     keyFrame->poseWrtOrigin[1]=0.0f;
-    keyFrame->poseWrtOrigin[2]=0.0f;
+    // keyFrame->poseWrtOrigin[2]=0.0f;
     // keyFrame->poseWrtOrigin[3]=0.0f;
     // keyFrame->poseWrtOrigin[4]=0.0f;
     // keyFrame-> poseWrtOrigin[5]=0.0f;

@@ -29,8 +29,8 @@ struct loopFrame
     Mat image_histogram;
     Mat image;
     int frameId=-1;
-    float poseWrtWorld[6];
-    float poseWrtOrigin[6];
+    float poseWrtWorld[2];
+    float poseWrtOrigin[2];
     
    // bool doLoopMatch=true;
     bool isValid=false;

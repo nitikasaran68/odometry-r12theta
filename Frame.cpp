@@ -108,15 +108,16 @@ frame::frame(VideoCapture vidcap_rgb)
     currentCols=width;
     currentRows=height; 
 
+
+    // float r_init = pow(pow(util::ORIG_FX,2) + pow(util::ORIG_FY)),0.5)
+    // poseWrtOrigin[0]=r_init;
+
     //initialize to 0 
     poseWrtOrigin[0]=0.0f; 
     poseWrtOrigin[1]=0.0f;
-    poseWrtOrigin[2]=0.0f;
-    
     
     poseWrtWorld[0]=0.0f;
     poseWrtWorld[1]=0.0f;
-    poseWrtWorld[2]=0.0f;
     
     rescaleFactor=1.0f;
     
@@ -239,10 +240,12 @@ frame::frame(VideoCapture vidcap_rgb,VideoCapture vidcap_depth)
     currentCols=width;
     currentRows=height;
 
+    // float r_init = pow(pow(util::ORIG_FX,2) + pow(util::ORIG_FY)),0.5)
+    // poseWrtOrigin[0]=r_init;
+
     //initialize to 0
     poseWrtOrigin[0]=0.0f; 
     poseWrtOrigin[1]=0.0f;
-    poseWrtOrigin[2]=0.0f;
     
  
     //make image pyramids
@@ -411,9 +414,12 @@ void frame::calculateNonZeroDepthPts()
 void frame::initializePose()
 {
     PRINTF("\nInitializing Pose Wrt Origin for Frame Id: %d", frameId);
+
+    // float r_init = pow(pow(util::ORIG_FX,2) + pow(util::ORIG_FY)),0.5)
+    // poseWrtOrigin[0]=r_init;
+
     poseWrtOrigin[0]=0.0f;
     poseWrtOrigin[1]=0.0f;
-    poseWrtOrigin[2]=0.0f;
 
 }
 
@@ -498,12 +504,11 @@ void frame::calculateSE3poseOtherWrtThis(frame *other_frame) // this to other
     
     concatenateOriginPose(other_frame->poseWrtOrigin, poseWrtOrigin, poseWrtThis);
 
-    float c = cos(poseWrtThis[2]);
-    float s = sin(poseWrtThis[2]);
-    float r1 = poseWrtThis[0];
-    float r2 = poseWrtThis[1]; 
+    float c = cos(poseWrtThis[1]);
+    float s = sin(poseWrtThis[1]);
+    float r = poseWrtThis[0];
     
-    Mat SE3=(Mat_<float>(4, 4) << c,0,-s,-(r1*s),0,1,0,0,s,0,c,((r1*c)-r2),0,0,0,1);
+    Mat SE3=(Mat_<float>(4, 4) << c,0,-s,-(r*s),0,1,0,0,s,0,c,((r*c)-r),0,0,0,1);
     
     Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> SE3_Eigen(SE3.ptr<float>(), SE3.rows, SE3.cols);
     
@@ -559,12 +564,11 @@ void frame::calculateSim3poseOtherWrtThis(float scale_factor)
 //converts se3 poseWrtWorld to SE3 form to get R and T matrices that are w.r. World
 void frame::calculateRandT()
 {
-    float c = cos(poseWrtWorld[2]);
-    float s = sin(poseWrtWorld[2]);
-    float r1 = poseWrtWorld[0];
-    float r2 = poseWrtWorld[1];
+    float c = cos(poseWrtWorld[1]);
+    float s = sin(poseWrtWorld[1]);
+    float r = poseWrtWorld[0];
 
-    Mat SE3=(Mat_<float>(4, 4) << c,0,-s,-(r1*s),0,1,0,0,s,0,c,((r1*c)-r2),0,0,0,1);
+    Mat SE3=(Mat_<float>(4, 4) << c,0,-s,-(r*s),0,1,0,0,s,0,c,((r*c)-r),0,0,0,1);
     
     Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> SE3_Pose(SE3.ptr<float>(), SE3.rows, SE3.cols);
     
@@ -586,12 +590,11 @@ void frame::calculateRandT()
 void frame::calculateRelativeRandT(float* relPose)
 {
 
-    float c = cos(relPose[2]);
-    float s = sin(relPose[2]);
-    float r1 = relPose[0];
-    float r2 = relPose[1];
+    float c = cos(relPose[1]);
+    float s = sin(relPose[1]);
+    float r = relPose[0];
 
-    Mat SE3=(Mat_<float>(4, 4) << c,0,-s,-(r1*s),0,1,0,0,s,0,c,((r1*c)-r2),0,0,0,1);
+    Mat SE3=(Mat_<float>(4, 4) << c,0,-s,-(r*s),0,1,0,0,s,0,c,((r*c)-r),0,0,0,1);
     
     Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> SE3_Pose(SE3.ptr<float>(), SE3.rows, SE3.cols);
     
@@ -611,34 +614,31 @@ void frame::calculateRelativeRandT(float* relPose)
 //concatenates poses using relative poses
 void frame::concatenateRelativePose(float *src_1wrt2, float *src_2wrt3, float *dest_1wrt3)
 {
-    float c = cos(src_1wrt2[2]);
-    float s = sin(src_1wrt2[2]);
-    float r1 = src_1wrt2[0];
-    float r2 = src_1wrt2[1];
+    float c = cos(src_1wrt2[1]);
+    float s = sin(src_1wrt2[1]);
+    float r = src_1wrt2[0];
 
-    Mat src_1wrt2_SE3=(Mat_<float>(4, 4) << c,0,-s,-(r1*s),0,1,0,0,s,0,c,((r1*c)-r2),0,0,0,1);
+    Mat src_1wrt2_SE3=(Mat_<float>(4, 4) << c,0,-s,-(r*s),0,1,0,0,s,0,c,((r*c)-r),0,0,0,1);
     Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> src_1wrt2_SE3Eigen(src_1wrt2_SE3.ptr<float>(), src_1wrt2_SE3.rows, src_1wrt2_SE3.cols);
 
-    c = cos(src_2wrt3[2]);
-    s = sin(src_2wrt3[2]);
-    r1 = src_2wrt3[0];
-    r2 = src_2wrt3[1];
+    c = cos(src_2wrt3[1]);
+    s = sin(src_2wrt3[1]);
+    r = src_2wrt3[0];
 
-    Mat src_2wrt3_SE3=(Mat_<float>(4, 4) << c,0,-s,-(r1*s),0,1,0,0,s,0,c,((r1*c)-r2),0,0,0,1);
+    Mat src_2wrt3_SE3=(Mat_<float>(4, 4) << c,0,-s,-(r*s),0,1,0,0,s,0,c,((r*c)-r),0,0,0,1);
     Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> src_2wrt3_SE3Eigen(src_2wrt3_SE3.ptr<float>(), src_2wrt3_SE3.rows, src_2wrt3_SE3.cols);
 
     Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> dest_1wrt3_SE3Eigen = src_1wrt2_SE3Eigen * src_2wrt3_SE3Eigen;
         
-    dest_1wrt3[0] = src_1wrt2[0];
-    dest_1wrt3[1] = src_2wrt3[1];
-    dest_1wrt3[2] = src_1wrt2[2] + src_2wrt3[2];
+    dest_1wrt3[1] = src_1wrt2[1] + src_2wrt3[1];
+    dest_1wrt3[0] = 0.5 * (dest_1wrt3_SE3Eigen(0,3)/dest_1wrt3_SE3Eigen(0,2)) + 
+                    0.5 * (dest_1wrt3_SE3Eigen(2,3)/(dest_1wrt3_SE3Eigen(0,0)-1)) ;
 
-    c = cos(dest_1wrt3[2]);
-    s = sin(dest_1wrt3[2]);
-    r1 = dest_1wrt3[0];
-    r2 = dest_1wrt3[1];
+    c = cos(dest_1wrt3[1]);
+    s = sin(dest_1wrt3[1]);
+    r = dest_1wrt3[0];
 
-    Mat dest_1wrt3_SE3=(Mat_<float>(4, 4) << c,0,-s,-(r1*s),0,1,0,0,s,0,c,((r1*c)-r2),0,0,0,1);
+    Mat dest_1wrt3_SE3=(Mat_<float>(4, 4) << c,0,-s,-(r*s),0,1,0,0,s,0,c,((r*c)-r),0,0,0,1);
     Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> dest_1wrt3_SE3Eigen2(dest_1wrt3_SE3.ptr<float>(), dest_1wrt3_SE3.rows, dest_1wrt3_SE3.cols);
 
     Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> diff = dest_1wrt3_SE3Eigen2 - dest_1wrt3_SE3Eigen;
@@ -657,35 +657,32 @@ void frame::concatenateRelativePose(float *src_1wrt2, float *src_2wrt3, float *d
 void frame::concatenateOriginPose(float *src_1wrt0, float *src_2wrt0, float *dest_1wrt2)
 {
 
-    float c = cos(src_1wrt0[2]);
-    float s = sin(src_1wrt0[2]);
-    float r1 = src_1wrt0[0];
-    float r2 = src_1wrt0[1];
+    float c = cos(src_1wrt0[1]);
+    float s = sin(src_1wrt0[1]);
+    float r = src_1wrt0[0];
 
-    Mat src_1wrt0_SE3=(Mat_<float>(4, 4) << c,0,-s,-(r1*s),0,1,0,0,s,0,c,((r1*c)-r2),0,0,0,1);
+    Mat src_1wrt0_SE3=(Mat_<float>(4, 4) << c,0,-s,-(r*s),0,1,0,0,s,0,c,((r*c)-r),0,0,0,1);
     Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> src_1wrt0_SE3Eigen(src_1wrt0_SE3.ptr<float>(), src_1wrt0_SE3.rows, src_1wrt0_SE3.cols);
 
-    c = cos(src_2wrt0[2]);
-    s = sin(src_2wrt0[2]);
-    r1 = src_2wrt0[0];
-    r2 = src_2wrt0[1];
+    c = cos(src_2wrt0[1]);
+    s = sin(src_2wrt0[1]);
+    r = src_2wrt0[0];
 
-    Mat src_2wrt0_SE3=(Mat_<float>(4, 4) << c,0,-s,-(r1*s),0,1,0,0,s,0,c,((r1*c)-r2),0,0,0,1);
+    Mat src_2wrt0_SE3=(Mat_<float>(4, 4) << c,0,-s,-(r*s),0,1,0,0,s,0,c,((r*c)-r),0,0,0,1);
     Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> src_2wrt0_SE3Eigen(src_2wrt0_SE3.ptr<float>(), src_2wrt0_SE3.rows, src_2wrt0_SE3.cols);
     Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> src_0wrt2_SE3Eigen = src_2wrt0_SE3Eigen.inverse();
 
     Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> dest_1wrt2_SE3Eigen = src_1wrt0_SE3Eigen * src_0wrt2_SE3Eigen;
         
-    dest_1wrt2[0] = src_1wrt0[0];
-    dest_1wrt2[1] = src_2wrt0[0];
-    dest_1wrt2[2] = src_1wrt0[2] - src_2wrt0[2];
+    dest_1wrt2[0] = 0.5 * (dest_1wrt2_SE3Eigen(0,3)/dest_1wrt2_SE3Eigen(0,2)) + 
+                    0.5 * (dest_1wrt2_SE3Eigen(2,3)/(dest_1wrt2_SE3Eigen(0,0)-1)) 
+    dest_1wrt2[1] = src_1wrt0[1] - src_2wrt0[1];
 
-    c = cos(dest_1wrt2[2]);
-    s = sin(dest_1wrt2[2]);
-    r1 = dest_1wrt2[0];
-    r2 = dest_1wrt2[1];
+    c = cos(dest_1wrt2[1]);
+    s = sin(dest_1wrt2[1]);
+    r = dest_1wrt2[0];
 
-    Mat dest_1wrt2_SE3=(Mat_<float>(4, 4) << c,0,-s,-(r1*s),0,1,0,0,s,0,c,((r1*c)-r2),0,0,0,1);
+    Mat dest_1wrt2_SE3=(Mat_<float>(4, 4) << c,0,-s,-(r*s),0,1,0,0,s,0,c,((r*c)-r),0,0,0,1);
     Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> dest_1wrt2_SE3Eigen2(dest_1wrt2_SE3.ptr<float>(), dest_1wrt2_SE3.rows, dest_1wrt2_SE3.cols);
 
     Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> diff = dest_1wrt2_SE3Eigen2 - dest_1wrt2_SE3Eigen;
@@ -701,28 +698,24 @@ void frame::concatenateOriginPose(float *src_1wrt0, float *src_2wrt0, float *des
 
 void frame::calculateInvLiePose(float *pose)
 {
-    float c = cos(pose[2]);
-    float s = sin(pose[2]);
-    float r1 = pose[0];
-    float r2 = pose[1];
+    float c = cos(pose[1]);
+    float s = sin(pose[1]);
+    float r = pose[0];
 
-    Mat SE3 = (Mat_<float>(4, 4) << c,0,-s,-(r1*s),0,1,0,0,s,0,c,((r1*c)-r2),0,0,0,1);
+    Mat SE3 = (Mat_<float>(4, 4) << c,0,-s,-(r*s),0,1,0,0,s,0,c,((r*c)-r),0,0,0,1);
     
     Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> SE3_Eigen(SE3.ptr<float>(), SE3.rows, SE3.cols);
     
     Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> SE3_Eigen_inv = SE3_Eigen.inverse();
     
-    float temp = pose[0];
-    pose[0] = pose[1];
-    pose[1] = temp;
-    pose[2] = -pose[2];
+    pose[0] = pose[0];
+    pose[1] = -pose[1];
 
-    c = cos(pose[2]);
-    s = sin(pose[2]);
-    r1 = pose[0];
-    r2 = pose[1];
+    c = cos(pose[1]);
+    s = sin(pose[1]);
+    r = pose[0];
 
-    SE3 = (Mat_<float>(4, 4) << c,0,-s,-(r1*s),0,1,0,0,s,0,c,((r1*c)-r2),0,0,0,1);
+    SE3 = (Mat_<float>(4, 4) << c,0,-s,-(r*s),0,1,0,0,s,0,c,((r*c)-r),0,0,0,1);
     
     Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> SE3_Eigen_inv2(SE3.ptr<float>(), SE3.rows, SE3.cols);
     
@@ -739,27 +732,24 @@ void frame::calculateInvLiePose(float *pose)
 
 void frame::calculateInvLiePose(float *posesrc, float *posedest)
 {
-    float c = cos(posesrc[2]);
-    float s = sin(posesrc[2]);
-    float r1 = posesrc[0];
-    float r2 = posesrc[1];
+    float c = cos(posesrc[1]);
+    float s = sin(posesrc[1]);
+    float r = posesrc[0];
 
-    Mat SE3 = (Mat_<float>(4, 4) << c,0,-s,-(r1*s),0,1,0,0,s,0,c,((r1*c)-r2),0,0,0,1);
+    Mat SE3 = (Mat_<float>(4, 4) << c,0,-s,-(r*s),0,1,0,0,s,0,c,((r*c)-r),0,0,0,1);
     
     Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> SE3_Eigen(SE3.ptr<float>(), SE3.rows, SE3.cols);
     
     Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> SE3_Eigen_inv = SE3_Eigen.inverse();
     
-    posedest[0] = posesrc[1];
-    posedest[1] = posesrc[0];
-    posedest[2] = -posesrc[2];
+    posedest[0] = posesrc[0];
+    posedest[1] = -posesrc[1];
 
-    c = cos(posedest[2]);
-    s = sin(posedest[2]);
-    r1 = posedest[0];
-    r2 = posedest[1];
+    c = cos(posedest[1]);
+    s = sin(posedest[1]);
+    r = posedest[0];
 
-    SE3 = (Mat_<float>(4, 4) << c,0,-s,-(r1*s),0,1,0,0,s,0,c,((r1*c)-r2),0,0,0,1);
+    SE3 = (Mat_<float>(4, 4) << c,0,-s,-(r*s),0,1,0,0,s,0,c,((r*c)-r),0,0,0,1);
     
     Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> SE3_Eigen_inv2(SE3.ptr<float>(), SE3.rows, SE3.cols);
     

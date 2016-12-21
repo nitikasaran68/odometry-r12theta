@@ -22,12 +22,12 @@
 #include <sstream>
 
 #include "UserDefinedFunc.h"
-#include "IterationFunc.h"
 #include "ExternVariable.h"
 #include "DisplayFunc.h"
 #include "Pyramid.h"
 #include "PixelWisePyramid.h"
 //#include "Homography.h"
+//#include "IterationFunc.h"
 
 
 #include "ImageFunc.h"
@@ -78,7 +78,6 @@ vector<float> GetImagePoseEstimate(frame* prev_frame, frame* current_frame, int 
     //when alternate_gn_ra is on then Flag_save_mats is On only for one keyframe prop
     //when alterna_gn_ra is off,then for less than 50
     //when alternate_gn_ra is on and bootstrap is on, then for less than 50
-
     if( util::FLAG_SAVE_MATS && !fromLoopClosure && (current_frame->frameId%util::KEYFRAME_PROPAGATE_INTERVAL==0) )
     {
         if((util::FLAG_ALTERNATE_GN_RA && util::NUM_GN_PROPAGATION<2 && util::GAUSS_NEWTON_FLAG_ON) || ((!util::FLAG_ALTERNATE_GN_RA) && (current_frame->frameId<50)) || ((util::FLAG_ALTERNATE_GN_RA) && (util::FLAG_IS_BOOTSTRAP) &&(current_frame->frameId<50)))
@@ -96,8 +95,8 @@ vector<float> GetImagePoseEstimate(frame* prev_frame, frame* current_frame, int 
     
     printf("\nCalculating Image Pose Estimate using current frame: %d and previous frame: %d", current_frame->frameId ,prev_frame->frameId);
     
-    float pose[3];
-    float initial_rel_pose[3];
+    float pose[2];
+    float initial_rel_pose[2];
 
     /*
     pose[0]=tminus1_prev_frame->poseWrtOrigin[0];
@@ -114,9 +113,10 @@ vector<float> GetImagePoseEstimate(frame* prev_frame, frame* current_frame, int 
     
     if(!util::FLAG_INITIALIZE_NONZERO_POSE || fromLoopClosure)
     {
+        // float r_init = pow(pow(util::ORIG_FX,2) + pow(util::ORIG_FY)),0.5)
+        // pose[0]=r_init;
         pose[0]=0.0f;
         pose[1]=0.0f;
-        pose[2]=0.0f;
         
         prev_frame->concatenateOriginPose(tminus1_prev_frame->poseWrtWorld, prev_frame->poseWrtWorld, pose);
         
@@ -126,28 +126,25 @@ vector<float> GetImagePoseEstimate(frame* prev_frame, frame* current_frame, int 
     {
         pose[0]=initial_pose_estimate[0];
         pose[1]=initial_pose_estimate[1];
-        pose[2]=initial_pose_estimate[2];
         
         //rotation part comes from given initialzed pose
         prev_frame->concatenateOriginPose(initial_pose_estimate, prev_frame->poseWrtWorld, pose);
     
-        float pose_trans[3];
+        float pose_trans[2];
         prev_frame->concatenateOriginPose(tminus1_prev_frame->poseWrtWorld, prev_frame->poseWrtWorld, pose_trans);
         
         //translation part comes from tminus1 frame
-        //another option is to initialzie translation as 0
-        pose[0]=pose_trans[1];
-        pose[1]=pose_trans[1];
+        //another option is to initialize translation as 0
+        pose[0]=pose_trans[0];
         
         initial_rel_pose[0]=pose[0];
         initial_rel_pose[1]=pose[1];
-        initial_rel_pose[2]=pose[2];
         
        // printf("\n\nINITIAL REL pose: %f, %f, %f", initial_rel_pose[0], initial_rel_pose[1], initial_rel_pose[2]);
     
     }
 
-    printf("\n!!Initial Pose estimate: %f , %f , %f", pose[0], pose[1], pose[2]);
+    printf("\n!!Initial Pose estimate: %f , %f ", pose[0], pose[1]);
     
     //initializing flags for image display
     int display_initial_img_flag=0;
@@ -215,7 +212,7 @@ vector<float> GetImagePoseEstimate(frame* prev_frame, frame* current_frame, int 
             if(!util::FLAG_DO_PARALLEL_POSE_ESTIMATION || (!util::FLAG_DO_CONST_WEIGHT_POSE_ESTIMATION && fromLoopClosure))
             {
                 float check_termination=workingPyramid.performIterationSteps();
-                if(workingPyramid.weightedPose<1.0f) //if true, pose change insignificant, therefore terminate iteration at this level
+                if( workingPyramid.weightedPose < 1.0f) //if true, pose change insignificant, therefore terminate iteration at this level
                     iter_counter=util::MAX_ITER[level_counter]-1;
                 
                 //to display current iteration residual
@@ -262,7 +259,7 @@ vector<float> GetImagePoseEstimate(frame* prev_frame, frame* current_frame, int 
                 }
                 
                 //if true, pose change insignificant, therefore terminate iteration at this level
-                if(workingPixelPyramid.weightedPose<1.0f)
+                if(workingPixelPyramid.weightedPose < 1.0f)
                 {
                     printf("\nInsignificant change!\n");
                     printf("%f\n",workingPixelPyramid.weightedPose);
@@ -319,7 +316,7 @@ vector<float> GetImagePoseEstimate(frame* prev_frame, frame* current_frame, int 
     } //exit pyramid loop
 
     
-    printf("\nEstimated pose: %f ,%f , %f ",pose[0],pose[1],pose[2]);
+    printf("\nEstimated pose: %f ,%f ",pose[0],pose[1]);
     
     //update pose variables of current farme
     current_frame->calculatePoseWrtOrigin(prev_frame,pose); //saves pose w.r.t kf
@@ -328,7 +325,7 @@ vector<float> GetImagePoseEstimate(frame* prev_frame, frame* current_frame, int 
     
 
     PRINTF("\nExiting frame loop..");
-    vector<float> posevec(pose, pose + 3);
+    vector<float> posevec(pose, pose + 2);
     
     float elapsed=time_pose.stopTimeMeasure();
     //cout <<"\nTime calculate pixel wise parallel: "<<int(util::FLAG_DO_PARALLEL_POSE_ESTIMATION)<<"  "<<elapsed<<endl;
